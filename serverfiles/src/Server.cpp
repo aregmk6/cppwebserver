@@ -1,9 +1,11 @@
 #include "Server.h"
 #include "consts.h"
 #include <cstddef>
+#include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <memory>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 
@@ -12,8 +14,18 @@ static const std::unordered_map<std::string_view, HttpMethod> methodMap = {
     {"POST", HttpMethod::POST},
     {"PUT", HttpMethod::PUT}};
 
+static const std::unordered_map<std::string_view, HttpVersion> versionMap = {
+    {"HTTP/1.0", HttpVersion::LEGACY},
+    {"HTTP/1.1", HttpVersion::ONE},
+    {"HTTP/2", HttpVersion::TWO},
+    {"HTTP/3", HttpVersion::THREE}};
+
 Server::Server() : socket(), buff() {
     buff.resize(MAX_HEADER_SIZE + 1, 0);
+}
+
+void Server::sendError(int num) const {
+    return;
 }
 
 bool Server::parse() {
@@ -38,19 +50,21 @@ bool Server::parse() {
     }
 
     firstLine = window.substr(0, lineEnd);
+    window.remove_prefix(lineEnd + 2);
     int count = 0;
     while (count < FL_HEADER_NR) {
-        if (count == FL_HEADER_NR - 1)
-            wordEnd = firstLine.find(DELIM);
-        else
+        if (count != FL_HEADER_NR - 1) {
             wordEnd = firstLine.find(SPACE);
 
-        if (wordEnd == std::string::npos) {
-            sendError(EHEADER);
-            return false;
-        }
+            if (wordEnd == std::string::npos) {
+                sendError(EHEADER);
+                return false;
+            }
 
-        curWord = window.substr(0, wordEnd);
+            curWord = firstLine.substr(0, wordEnd);
+        } else {
+            curWord = firstLine;
+        }
 
         switch (count) {
         case 0:
@@ -113,20 +127,64 @@ bool Server::parse() {
     return handle(std::move(req));
 }
 
+using namespace std::filesystem;
+
 bool Server::handle(std::unique_ptr<HttpRequest> req) const {
-    auto it = methodMap.find(req->method);
-    if (it == methodMap.end()) {
+    auto it_method = methodMap.find(req->method);
+    if (it_method == methodMap.end()) {
         sendError(EHEADER); // TODO: switch to other error
         return false;
     }
-    switch (it->second) {
+
+    auto it_version = versionMap.find(req->version);
+    if (it_version == versionMap.end()) {
+        sendError(EHEADER); // TODO: switch to other error
+        return false;
+    }
+
+    path httpPath(req->path);
+
+    int r;
+    switch (it_method->second) {
     case HttpMethod::GET:
+        if (!exists(httpPath)) return false;
+
+        r = handleGet(httpPath);
         break;
     case HttpMethod::POST:
+        // r = handlePost();
         break;
     case HttpMethod::PUT:
         break;
     }
 
     return false;
+}
+
+bool Server::handleGet(path &path) const {
+    constexpr char OK_MSG[] = "HTTP/1.1 200 OK\r\n";
+    constexpr char CNT_LNG[] = "Content-Length: ";
+
+    constexpr char body[] =
+        R"(<!DOCTYPE html>
+<html>
+    <head>
+	<title>Hello World Page Title</title>
+    </head>
+    <body>
+	<h1>Hello, World!</h1>
+	<p>This is my first paragraph.</p>
+    </body>
+</html>)";
+
+    constexpr int size = sizeof(body) - 1;
+    std::string resp = std::string(OK_MSG) + std::string(CNT_LNG) +
+                       std::to_string(size) + std::string("\r\n") +
+                       std::string("\r\n") + std::string(body);
+
+    socket.Send(resp);
+
+    /* test */
+
+    return true;
 }

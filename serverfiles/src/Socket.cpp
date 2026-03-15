@@ -1,8 +1,10 @@
 #include "Socket.h"
 #include <cstdio>
 #include <cstdlib>
+#include <iostream>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 Socket::Socket() {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -13,7 +15,7 @@ Socket::Socket() {
 
     serverAddr.addr.sin_family = AF_INET;
     serverAddr.addr.sin_port = htons(8080);
-    serverAddr.addr.sin_addr.s_addr = htons(INADDR_LOOPBACK);
+    serverAddr.addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     serverAddr.addrLen = sizeof(serverAddr.addr);
 }
 
@@ -46,10 +48,19 @@ void Socket::Listen() const {
     }
 }
 
+void Socket::Close() {
+    close(clientfd);
+    clientfd = -1;
+}
+
 int Socket::readHeader(std::string &buf) const {
     int totalBytes = 0;
     while (1) {
-        int br = recv(sockfd, &buf[0], MAX_HEADER_SIZE, 0);
+        int br = recv(clientfd, &buf[0], MAX_HEADER_SIZE, 0);
+        if (br < 0) {
+            perror("recv");
+            exit(EXIT_FAILURE);
+        }
 
         totalBytes += br;
 
@@ -70,7 +81,7 @@ bool Socket::Send(std::string &buf) const {
     int bytesLeft = buf.size();
 
     while (1) {
-        int bs = send(sockfd, buf.c_str() + startFrom, bytesLeft, 0);
+        int bs = send(clientfd, buf.c_str() + startFrom, bytesLeft, 0);
 
         if (bs <= 0) {
             return false;

@@ -2,6 +2,7 @@
 #define SERVER_H
 
 #include "Socket.h"
+#include <filesystem>
 #include <memory>
 #include <netinet/in.h>
 #include <string>
@@ -10,6 +11,7 @@
 #include <unordered_map>
 
 enum class HttpMethod { GET, POST, PUT };
+enum class HttpVersion { LEGACY, ONE, TWO, THREE };
 
 struct HttpRequest {
     std::string_view method;
@@ -20,15 +22,17 @@ struct HttpRequest {
 };
 
 class Server {
-    Socket socket;
-    std::string buff;
 
     bool handle(std::unique_ptr<HttpRequest> req) const;
-    void handleGet() const;
-    void handlePost() const;
+    bool handleGet(std::filesystem::path &path) const;
+    // bool handlePost() const;
+    // bool handlePut() const;
     void sendError(int num) const;
 
   public:
+    Socket socket;
+    std::string buff;
+
     Server();
     bool parse();
 };

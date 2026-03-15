@@ -12,18 +12,19 @@ struct Address {
 };
 
 class Socket {
-    int sockfd;
-    int clientfd = -1;
     Address clientAddr = {0};
     Address serverAddr = {0};
 
   public:
+    int sockfd;
+    int clientfd = -1;
+
     Socket(); /* TCP socket */
-    ~Socket();
 
     void Bind() const;
     void Listen() const;
     void Accept();
+    void Close();
 
     int readHeader(std::string &buf) const;
     bool Send(std::string &buf) const;
