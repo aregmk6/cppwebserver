@@ -23,8 +23,8 @@ struct HttpRequest {
 
 class Server {
 
-    bool handle(std::unique_ptr<HttpRequest> req) const;
-    bool handleGet(std::filesystem::path &path) const;
+    bool handle(std::unique_ptr<HttpRequest> req);
+    bool handleGet(std::filesystem::path &path);
     // bool handlePost() const;
     // bool handlePut() const;
     void sendError(int num) const;

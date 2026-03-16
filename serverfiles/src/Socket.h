@@ -26,8 +26,12 @@ class Socket {
     void Accept();
     void Close();
 
+    void cork() const;
+    void uncork() const;
+
     int readHeader(std::string &buf) const;
-    bool Send(std::string &buf) const;
+    bool Send(const std::string &buf) const;
+    bool SendFile(int fd, int size) const;
 };
 
 #endif

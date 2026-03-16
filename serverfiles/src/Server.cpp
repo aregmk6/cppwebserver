@@ -1,12 +1,16 @@
 #include "Server.h"
 #include "consts.h"
 #include <cstddef>
+#include <cstdlib>
+#include <fcntl.h>
 #include <filesystem>
 #include <iostream>
 #include <iterator>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <sys/sendfile.h>
+#include <unistd.h>
 #include <unordered_map>
 
 static const std::unordered_map<std::string_view, HttpMethod> methodMap = {
@@ -129,7 +133,7 @@ bool Server::parse() {
 
 using namespace std::filesystem;
 
-bool Server::handle(std::unique_ptr<HttpRequest> req) const {
+bool Server::handle(std::unique_ptr<HttpRequest> req) {
     auto it_method = methodMap.find(req->method);
     if (it_method == methodMap.end()) {
         sendError(EHEADER); // TODO: switch to other error
@@ -161,30 +165,58 @@ bool Server::handle(std::unique_ptr<HttpRequest> req) const {
     return false;
 }
 
-bool Server::handleGet(path &path) const {
-    constexpr char OK_MSG[] = "HTTP/1.1 200 OK\r\n";
-    constexpr char CNT_LNG[] = "Content-Length: ";
+bool Server::handleGet(path &reqPath) {
+    static const path rootPath = "/home/aregmk/Coding/web/cppserver/webfiles/";
+    static constexpr std::string_view OK_MSG = "HTTP/1.1 200 OK\r\n";
+    static constexpr std::string_view CNT_LNG = "Content-Length: ";
+    static constexpr std::string_view CNT_TYPE = "Content-Type: text/html\r\n";
+    // TODO: add more content types
+    static std::string FNL_LNG;
 
-    constexpr char body[] =
-        R"(<!DOCTYPE html>
-<html>
-    <head>
-	<title>Hello World Page Title</title>
-    </head>
-    <body>
-	<h1>Hello, World!</h1>
-	<p>This is my first paragraph.</p>
-    </body>
-</html>)";
+    path workPath;
 
-    constexpr int size = sizeof(body) - 1;
-    std::string resp = std::string(OK_MSG) + std::string(CNT_LNG) +
-                       std::to_string(size) + std::string("\r\n") +
-                       std::string("\r\n") + std::string(body);
+    if (reqPath == "/") {
+        workPath = rootPath / "index.html";
+    } else {
+        workPath = rootPath / reqPath.relative_path();
+    }
 
-    socket.Send(resp);
+    std::cout << reqPath << std::endl;
+    std::cout << workPath << std::endl;
+
+    int fd = open(workPath.c_str(), O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        exit(EXIT_FAILURE);
+    }
+
+    int size = lseek(fd, 0, SEEK_END);
+    if (size < 0) {
+        perror("lseek end");
+        exit(EXIT_FAILURE);
+    }
+
+    if (lseek(fd, 0, SEEK_SET) < 0) {
+        perror("lseek set");
+        exit(EXIT_FAILURE);
+    }
+
+    FNL_LNG = std::string(CNT_LNG) + std::to_string(size) + std::string(DELIM);
+    buff = std::string(OK_MSG) + FNL_LNG + std::string(CNT_TYPE) +
+           std::string(DELIM);
+
+    // change the send to accept a string_view for zero copy
+
+    socket.cork();
+
+    socket.Send(buff);
+    socket.SendFile(fd, size);
+
+    socket.uncork();
 
     /* test */
+
+    close(fd);
 
     return true;
 }
