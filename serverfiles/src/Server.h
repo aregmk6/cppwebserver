@@ -12,6 +12,7 @@
 
 enum class HttpMethod { GET, POST, PUT };
 enum class HttpVersion { LEGACY, ONE, TWO, THREE };
+enum class fileType { HTML, CSS, JS };
 
 struct HttpRequest {
     std::string_view method;

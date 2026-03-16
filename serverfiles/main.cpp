@@ -1,17 +1,30 @@
 #include "src/Server.h"
+#include <chrono>
 #include <iostream>
 #include <sys/socket.h>
+
+using Clock = std::chrono::steady_clock;
+using TimePoint = std::chrono::time_point<Clock>;
 
 int main() {
     Server server;
     server.socket.Bind();
     server.socket.Listen();
 
+    auto now = Clock::now();
+
     while (1) {
         server.socket.Accept();
         std::cout << "accepted" << std::endl;
 
-        server.parse();
+        while (1) {
+            server.parse();
+
+            auto after = Clock::now();
+            if (TimePoint(after - now) > TimePoint(std::chrono::seconds(2))) {
+                break;
+            }
+        }
 
         std::cout << "handled" << std::endl;
 

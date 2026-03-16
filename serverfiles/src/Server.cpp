@@ -24,6 +24,9 @@ static const std::unordered_map<std::string_view, HttpVersion> versionMap = {
     {"HTTP/2", HttpVersion::TWO},
     {"HTTP/3", HttpVersion::THREE}};
 
+static const std::unordered_map<std::string_view, fileType> fileTypeMap = {
+    {".html", fileType::HTML}, {".css", fileType::CSS}, {".js", fileType::JS}};
+
 Server::Server() : socket(), buff() {
     buff.resize(MAX_HEADER_SIZE + 1, 0);
 }
@@ -68,6 +71,7 @@ bool Server::parse() {
             curWord = firstLine.substr(0, wordEnd);
         } else {
             curWord = firstLine;
+            wordEnd = -1;
         }
 
         switch (count) {
@@ -83,6 +87,7 @@ bool Server::parse() {
         }
 
         firstLine.remove_prefix(wordEnd + 1); // size of a single space = 1
+
         count++;
     }
 
@@ -146,14 +151,27 @@ bool Server::handle(std::unique_ptr<HttpRequest> req) {
         return false;
     }
 
+    static const path rootPath = "/home/aregmk/Coding/web/cppserver/webfiles/";
+
     path httpPath(req->path);
+
+    path workPath;
+
+    if (httpPath == "/") {
+        workPath = rootPath / "index.html";
+    } else {
+        workPath = rootPath / httpPath.relative_path();
+    }
+
+    std::cout << httpPath << std::endl;
+    std::cout << workPath << std::endl;
 
     int r;
     switch (it_method->second) {
     case HttpMethod::GET:
-        if (!exists(httpPath)) return false;
+        if (!exists(workPath)) return false;
 
-        r = handleGet(httpPath);
+        r = handleGet(workPath);
         break;
     case HttpMethod::POST:
         // r = handlePost();
@@ -165,24 +183,13 @@ bool Server::handle(std::unique_ptr<HttpRequest> req) {
     return false;
 }
 
-bool Server::handleGet(path &reqPath) {
-    static const path rootPath = "/home/aregmk/Coding/web/cppserver/webfiles/";
+bool Server::handleGet(path &workPath) {
     static constexpr std::string_view OK_MSG = "HTTP/1.1 200 OK\r\n";
     static constexpr std::string_view CNT_LNG = "Content-Length: ";
-    static constexpr std::string_view CNT_TYPE = "Content-Type: text/html\r\n";
+    static constexpr std::string_view CNT_TYPE = "Content-Type: ";
     // TODO: add more content types
     static std::string FNL_LNG;
-
-    path workPath;
-
-    if (reqPath == "/") {
-        workPath = rootPath / "index.html";
-    } else {
-        workPath = rootPath / reqPath.relative_path();
-    }
-
-    std::cout << reqPath << std::endl;
-    std::cout << workPath << std::endl;
+    static std::string FNL_TYPE;
 
     int fd = open(workPath.c_str(), O_RDONLY);
     if (fd < 0) {
@@ -201,8 +208,30 @@ bool Server::handleGet(path &reqPath) {
         exit(EXIT_FAILURE);
     }
 
+    auto it_exten = fileTypeMap.find(workPath.extension().c_str());
+    if (it_exten == fileTypeMap.end()) {
+        std::cerr << "extention not supported" << std::endl;
+        return false;
+    }
+
+    switch (it_exten->second) {
+    case fileType::HTML:
+        FNL_TYPE = std::string(CNT_TYPE) +
+                   std::string("text/html; charset=UTF-8") + std::string(DELIM);
+        break;
+    case fileType::CSS:
+        FNL_TYPE = std::string(CNT_TYPE) +
+                   std::string("text/css; charset=UTF-8") + std::string(DELIM);
+        break;
+    case fileType::JS:
+        FNL_TYPE = std::string(CNT_TYPE) + std::string("text/javascript") +
+                   std::string(DELIM);
+        break;
+    }
+
     FNL_LNG = std::string(CNT_LNG) + std::to_string(size) + std::string(DELIM);
-    buff = std::string(OK_MSG) + FNL_LNG + std::string(CNT_TYPE) +
+
+    buff = std::string(OK_MSG) + FNL_LNG + std::string(FNL_TYPE) +
            std::string(DELIM);
 
     // change the send to accept a string_view for zero copy

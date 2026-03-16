@@ -1,4 +1,5 @@
 #include "Socket.h"
+#include "consts.h"
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -56,6 +57,7 @@ void Socket::Close() {
 }
 
 int Socket::readHeader(std::string &buf) const {
+    buf.resize(MAX_HEADER_SIZE);
     int totalBytes = 0;
     while (1) {
         int br = recv(clientfd, &buf[0], MAX_HEADER_SIZE, 0);
@@ -74,6 +76,7 @@ int Socket::readHeader(std::string &buf) const {
             return -1;
         }
     }
+    std::cout << buf << std::endl;
 
     return totalBytes;
 }
