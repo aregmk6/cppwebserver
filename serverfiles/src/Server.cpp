@@ -25,7 +25,12 @@ static const std::unordered_map<std::string_view, HttpVersion> versionMap = {
     {"HTTP/3", HttpVersion::THREE}};
 
 static const std::unordered_map<std::string_view, fileType> fileTypeMap = {
-    {".html", fileType::HTML}, {".css", fileType::CSS}, {".js", fileType::JS}};
+    {".html", fileType::HTML},
+    {".css", fileType::CSS},
+    {".js", fileType::JS},
+    {".png", fileType::PNG},
+    {".jpeg", fileType::JPEG},
+    {".jpg", fileType::JPG}};
 
 Server::Server() : socket(), buff() {
     buff.resize(MAX_HEADER_SIZE + 1, 0);
@@ -225,6 +230,18 @@ bool Server::handleGet(path &workPath) {
         break;
     case fileType::JS:
         FNL_TYPE = std::string(CNT_TYPE) + std::string("text/javascript") +
+                   std::string(DELIM);
+        break;
+    case fileType::PNG:
+        FNL_TYPE = std::string(CNT_TYPE) + std::string("image/png") +
+                   std::string(DELIM);
+        break;
+    case fileType::JPEG:
+        FNL_TYPE = std::string(CNT_TYPE) + std::string("image/jpeg") +
+                   std::string(DELIM);
+        break;
+    case fileType::JPG:
+        FNL_TYPE = std::string(CNT_TYPE) + std::string("image/jpg") +
                    std::string(DELIM);
         break;
     }

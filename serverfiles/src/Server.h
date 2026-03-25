@@ -12,7 +12,7 @@
 
 enum class HttpMethod { GET, POST, PUT };
 enum class HttpVersion { LEGACY, ONE, TWO, THREE };
-enum class fileType { HTML, CSS, JS };
+enum class fileType { HTML, CSS, JS, PNG, JPEG, JPG };
 
 struct HttpRequest {
     std::string_view method;
@@ -27,7 +27,8 @@ class Server {
     bool handle(std::unique_ptr<HttpRequest> req);
     bool handleGet(std::filesystem::path &path);
     // bool handlePost() const;
-    // bool handlePut() const;
+    // bool handlePut() c
+    // onst;
     void sendError(int num) const;
 
   public:

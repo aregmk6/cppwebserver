@@ -22,6 +22,7 @@ int main() {
 
             auto after = Clock::now();
             if (TimePoint(after - now) > TimePoint(std::chrono::seconds(2))) {
+                std::cout << "clock ended" << std::endl;
                 break;
             }
         }
