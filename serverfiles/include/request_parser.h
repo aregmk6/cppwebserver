@@ -14,7 +14,8 @@ class ReqParser
 public:
   enum parse_res { success, failure, incomplete };
 
-  Request parse(const char *req_str) const;
+  Request parse(const std::string &req_str) const;
+  parse_res check_result() const;
 
 private:
   enum cur_state { PLACE_HOLDER };

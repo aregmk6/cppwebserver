@@ -114,6 +114,10 @@ void amk::ClientSocket::send_response(const File &src)
   send_body(src);
   uncork();
 }
+const std::string &amk::ClientSocket::get_buf() const
+{
+  return buf;
+}
 
 bool ClientSocket::send_header(const Response &resp) const
 {

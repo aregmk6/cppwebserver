@@ -31,6 +31,7 @@ public:
 
   int read_header();
   void send_response(const File &src);
+  const std::string &get_buf() const;
 
 private:
   std::string buf;

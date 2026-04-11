@@ -6,6 +6,7 @@
 #include "request_parser.h"
 
 #include <filesystem>
+#include <iostream>
 
 namespace amk
 {
@@ -15,11 +16,12 @@ using std::filesystem::path;
 class ReqHandler
 {
 public:
-  void handle_conn();
   void handle_conn(ClientSocket &new_conn);
 
+  void handle_conn();
+
 private:
-  Request &parse(); // return m_cur_req;
+  void parse();
   void handle(Request &req);
 
   void handle_get(path &uri);
