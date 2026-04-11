@@ -1,14 +1,10 @@
 #include "amk_socket.h"
 #include "server.h"
 
-#include <chrono>
 #include <iostream>
 #include <unistd.h>
 
 using namespace amk;
-
-using Clock     = std::chrono::steady_clock;
-using TimePoint = std::chrono::time_point<Clock>;
 
 int main()
 {

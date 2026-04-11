@@ -19,11 +19,13 @@ public:
   File(path src, open_mode mode);
   ~File();
   size_t get_size() const;
+  const path get_extension() const;
   int fd() const;
 
 private:
   int file_descriptor;
   size_t file_size;
+  path file_path;
 
   void calc_file_size();
 };

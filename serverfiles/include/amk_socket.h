@@ -1,6 +1,9 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#include "file.h"
+#include "response.h"
+
 #include <asm-generic/socket.h>
 #include <iostream>
 #include <netinet/in.h>
@@ -26,13 +29,15 @@ public:
 
   void Close();
 
-  int readHeader(std::string &buf) const;
-  bool Send(const std::string &buf) const;
-  bool SendFile(int fd, int size) const;
+  int read_header();
+  void send_response(const File &src);
 
 private:
+  std::string buf;
   void cork() const;
   void uncork() const;
+  bool send_header(const Response &res) const;
+  bool send_body(const File &src) const;
   void set_keep_alive() const;
   void unset_keep_alive() const;
 

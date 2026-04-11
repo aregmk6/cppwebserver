@@ -18,6 +18,7 @@ ClientSocket amk::Server::wait_for_connection()
 {
   return m_listening_socket.Accept();
 }
+
 void amk::Server::send_client(ClientSocket &client_conn)
 {
   m_thpool.add_client(client_conn);

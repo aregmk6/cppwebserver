@@ -15,11 +15,13 @@ using std::filesystem::path;
 class ReqHandler
 {
 public:
-  void handle(ClientSocket &new_conn);
+  void handle_conn();
+  void handle_conn(ClientSocket &new_conn);
 
 private:
   Request &parse(); // return m_cur_req;
   void handle(Request &req);
+
   void handle_get(path &uri);
 
   ClientSocket m_client_socket;

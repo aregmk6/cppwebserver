@@ -1,5 +1,6 @@
 #include "amk_socket.h"
 
+#include "response.h"
 #include "utils.h"
 
 #include <cstdio>
@@ -79,11 +80,11 @@ void amk::ClientSocket::Close()
   m_client_fd = -1;
 }
 
-int ClientSocket::readHeader(std::string &buf) const
+int ClientSocket::read_header()
 {
   buf.resize(max_header_size);
   int totalBytes = 0;
-  while (1) {
+  while (true) {
     int br = recv(m_client_fd, &buf[0], max_header_size, 0);
     if (br < 0) {
       perror("recv");
@@ -104,14 +105,23 @@ int ClientSocket::readHeader(std::string &buf) const
 
   return totalBytes;
 }
+void amk::ClientSocket::send_response(const File &src)
+{
+  Response resp(src);
 
-bool ClientSocket::Send(const std::string &buf) const
+  cork();
+  send_header(resp);
+  send_body(src);
+  uncork();
+}
+
+bool ClientSocket::send_header(const Response &resp) const
 {
   int startFrom = 0;
-  int bytesLeft = buf.size();
+  int bytesLeft = resp.header().size();
 
-  while (1) {
-    int bs = send(m_client_fd, buf.c_str() + startFrom, bytesLeft, 0);
+  while (true) {
+    int bs = send(m_client_fd, resp.header().c_str() + startFrom, bytesLeft, 0);
 
     if (bs <= 0) {
       return false;
@@ -129,13 +139,13 @@ bool ClientSocket::Send(const std::string &buf) const
   return true;
 }
 
-bool ClientSocket::SendFile(int fd, int size) const
+bool ClientSocket::send_body(const File &src) const
 {
   int startFrom = 0;
-  int bytesLeft = size;
+  int bytesLeft = src.get_size();
 
   while (1) {
-    int bs = sendfile(m_client_fd, fd, 0, bytesLeft);
+    int bs = sendfile(m_client_fd, src.fd(), 0, bytesLeft);
 
     if (bs <= 0) {
       return false;

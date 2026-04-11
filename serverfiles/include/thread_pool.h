@@ -33,7 +33,6 @@ private:
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cond;
   const std::function<bool()> loop_predicate;
-  ReqHandler m_handler;
 };
 
 } // namespace amk

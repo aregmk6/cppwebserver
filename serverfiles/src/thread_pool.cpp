@@ -47,19 +47,19 @@ void amk::ThreadPool::threadLoop()
 {
   std::string cur_req_buff;
   ClientSocket new_conn;
+  ReqHandler handler;
   while (true) {
     {
       std::unique_lock lock(m_queue_mutex);
       m_queue_cond.wait(lock, loop_predicate);
       if (m_should_terminate) {
-        // thread just finishes
         return;
       }
       new_conn = m_client_queue.back();
       m_client_queue.pop();
     }
 
-    m_handler.handle(new_conn);
+    handler.handle_conn(new_conn);
 
     new_conn.Close();
   }
