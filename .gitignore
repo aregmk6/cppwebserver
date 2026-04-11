@@ -1,3 +1,4 @@
 build/
 webfiles/
 notes.md
+.env
