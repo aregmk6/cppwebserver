@@ -1,4 +1,5 @@
 #include "amk_socket.h"
+
 #include "utils.h"
 
 #include <cstdio>
@@ -65,10 +66,10 @@ void Socket::Close()
 
 int Socket::readHeader(std::string &buf) const
 {
-  buf.resize(MAX_HEADER_SIZE);
+  buf.resize(max_header_size);
   int totalBytes = 0;
   while (1) {
-    int br = recv(clientfd, &buf[0], MAX_HEADER_SIZE, 0);
+    int br = recv(clientfd, &buf[0], max_header_size, 0);
     if (br < 0) {
       perror("recv");
       exit(EXIT_FAILURE);
@@ -76,11 +77,11 @@ int Socket::readHeader(std::string &buf) const
 
     totalBytes += br;
 
-    if (buf.find(HEADER_END) != std::string::npos) {
+    if (buf.find(header_end) != std::string::npos) {
       break;
     }
 
-    if (totalBytes == MAX_HEADER_SIZE) {
+    if (totalBytes == max_header_size) {
       return -1;
     }
   }

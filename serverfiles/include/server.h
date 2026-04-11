@@ -2,6 +2,7 @@
 #define SERVER_H
 
 #include "amk_socket.h"
+#include "threadPool.h"
 
 #include <filesystem>
 #include <memory>
@@ -18,29 +19,16 @@ enum class fileType { HTML, CSS, JS, PNG, JPEG, JPG };
 namespace amk
 {
 
-struct HttpRequest {
-  std::string_view method;
-  std::string_view path;
-  std::string_view version;
-
-  std::unordered_map<std::string_view, std::string_view> headers;
-};
-
-class server
+class Server
 {
 public:
   Socket socket;
   std::string buff;
 
-  server();
-  bool parse();
+  Server();
 
 private:
-  bool handle(std::unique_ptr<HttpRequest> req);
-  bool handleGet(std::filesystem::path &path);
-  // bool handlePost() const;
-  // bool handlePut() const;
-  void sendError(int num) const;
+  ThreadPool m_tpool;
 };
 
 } // namespace amk

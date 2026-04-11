@@ -2,7 +2,7 @@
 
 using namespace amk;
 
-file::file(path src, open_mode mode)
+File::File(path src, open_mode mode)
 {
   switch (mode) {
   case open_mode::read:
@@ -23,20 +23,20 @@ file::file(path src, open_mode mode)
 
   calc_file_size();
 }
-amk::file::~file()
+amk::File::~File()
 {
   close(file_descriptor);
 }
-size_t amk::file::get_size() const
+size_t amk::File::get_size() const
 {
   return file_size;
 }
-int amk::file::fd() const
+int amk::File::fd() const
 {
   return file_descriptor;
 }
 
-void amk::file::calc_file_size()
+void amk::File::calc_file_size()
 {
   file_size = lseek(file_descriptor, 0, SEEK_END);
   if (file_size < 0) {

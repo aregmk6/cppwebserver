@@ -8,7 +8,7 @@
 namespace amk
 {
 
-struct address {
+struct Address {
   struct sockaddr_in addr = {0};
   socklen_t addrLen       = 0;
 };
@@ -34,8 +34,8 @@ public:
   bool SendFile(int fd, int size) const;
 
 private:
-  address clientAddr = {0};
-  address serverAddr = {0};
+  Address clientAddr = {0};
+  Address serverAddr = {0};
 };
 
 } // namespace amk

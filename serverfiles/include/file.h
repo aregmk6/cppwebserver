@@ -12,12 +12,12 @@ using std::filesystem::path;
 
 // TODO: add more methods, for now this is all because I don't need more.
 
-class file
+class File
 {
 public:
   enum class open_mode { read, write, read_write };
-  file(path src, open_mode mode);
-  ~file();
+  File(path src, open_mode mode);
+  ~File();
   size_t get_size() const;
   int fd() const;
 

@@ -12,11 +12,11 @@
 namespace amk
 {
 
-class threadPool
+class ThreadPool
 {
 public:
-  threadPool(int pool_size = std::thread::hardware_concurrency());
-  ~threadPool();
+  ThreadPool(int pool_size = std::thread::hardware_concurrency());
+  ~ThreadPool();
 
   template <typename F, typename... Args>
   void add_job(F &&f, Args &&...args);
@@ -35,7 +35,7 @@ private:
 };
 
 template <typename F, typename... Args>
-inline void threadPool::add_job(F &&f, Args &&...args)
+inline void ThreadPool::add_job(F &&f, Args &&...args)
 {
   /* I want to be able to do jobs that are not only void(), so I wrap it in a
    * lambda.

@@ -4,15 +4,15 @@
 namespace amk
 {
 
-constexpr char HEADER_END[] = "\r\n\r\n";
-constexpr char DELIM[]      = "\r\n";
-constexpr char SPACE        = ' ';
+constexpr char header_end[] = "\r\n\r\n";
+constexpr char delim[]      = "\r\n";
+constexpr char space        = ' ';
 
-constexpr int MAX_HEADER_SIZE        = 1024 * 8;
-constexpr int FIRST_LINE_HEADER_SIZE = 3;
+constexpr int max_header_size        = 1024 * 8;
+constexpr int first_line_header_size = 3;
 
 // errors
-constexpr int EHEADER = 400;
+constexpr int eheader = 400;
 
 } // namespace amk
 

@@ -10,7 +10,7 @@ using TimePoint = std::chrono::time_point<Clock>;
 
 int main()
 {
-  server server;
+  Server server;
   server.socket.Bind();
   server.socket.Listen();
 

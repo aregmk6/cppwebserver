@@ -2,16 +2,16 @@
 
 using namespace amk;
 
-threadPool::threadPool(int pool_size)
+ThreadPool::ThreadPool(int pool_size)
     : m_pool_size(pool_size), m_workers(m_pool_size), loop_predicate([this]() {
         return !m_jobs_queue.empty() && !m_should_terminate;
       })
 {
   for (int i = 0; i < m_pool_size; ++i) {
-    m_workers.emplace_back(std::thread(&threadPool::threadLoop, this));
+    m_workers.emplace_back(std::thread(&ThreadPool::threadLoop, this));
   }
 }
-amk::threadPool::~threadPool()
+amk::ThreadPool::~ThreadPool()
 {
   {
     const std::lock_guard lock(m_queue_mutex);
@@ -24,13 +24,13 @@ amk::threadPool::~threadPool()
   }
   m_workers.clear();
 }
-bool amk::threadPool::is_busy() const
+bool amk::ThreadPool::is_busy() const
 {
   std::lock_guard queue_lock(m_queue_mutex);
   return !m_jobs_queue.empty();
 }
 
-void amk::threadPool::threadLoop()
+void amk::ThreadPool::threadLoop()
 {
   while (true) {
     std::function<void()> job;
