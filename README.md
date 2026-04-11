@@ -15,3 +15,6 @@ exists, but it's more fun to build your own for a small website that will probab
 #### 11/04/26:
 * created thread pool support and made skeleton for a new parser. Gonna start working on the parser now, got a good idea from this [project](https://github.com/nekipelov/httpparser.git).
 
+#### 12/04/26:
+* Extended the skeleton to be an actual implementation. Now on to work on the parser, semester is gonna start now, so it's probably gonna take
+a few days. But the project is looking a lot nicer now in general. It's 2AM, good night.
