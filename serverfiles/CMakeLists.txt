@@ -7,11 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED	True)
 
 project(MyWebServer C CXX)
 
-add_executable(server src/main.cpp)
+add_executable(server ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
 target_include_directories(server
-		PRIVATE include/
+		PRIVATE ${CMAKE_SOURCE_DIR}/include
 )
 
 
-add_subdirectory(src)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src)

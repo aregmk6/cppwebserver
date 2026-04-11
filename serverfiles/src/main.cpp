@@ -1,7 +1,9 @@
+#include "amk_socket.h"
 #include "server.h"
 
 #include <chrono>
 #include <iostream>
+#include <unistd.h>
 
 using namespace amk;
 
@@ -11,29 +13,14 @@ using TimePoint = std::chrono::time_point<Clock>;
 int main()
 {
   Server server;
-  server.socket.Bind();
-  server.socket.Listen();
 
-  auto now = Clock::now();
+  while (true) {
+    ClientSocket client_conn = server.wait_for_connection();
 
-  while (1) {
-    server.socket.Accept();
     std::cout << "accepted" << std::endl;
 
-    while (1) {
-      server.parse();
+    server.send_client(client_conn);
 
-      auto after = Clock::now();
-      if (TimePoint(after - now) > TimePoint(std::chrono::seconds(2))) {
-        std::cout << "clock ended" << std::endl;
-        break;
-      }
-    }
-
-    std::cout << "handled" << std::endl;
-
-    server.socket.Close();
-
-    std::cout << "connection closed" << std::endl;
+    std::cout << "sent off" << std::endl;
   };
 }

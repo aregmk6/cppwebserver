@@ -13,10 +13,10 @@
 
 using namespace amk;
 
-Socket::Socket()
+ListeningSocket::ListeningSocket()
 {
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  if (sockfd < 0) {
+  m_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+  if (m_listen_fd < 0) {
     perror("socket");
     exit(EXIT_FAILURE);
   }
@@ -27,9 +27,15 @@ Socket::Socket()
   serverAddr.addrLen              = sizeof(serverAddr.addr);
 }
 
-void Socket::Bind() const
+ListeningSocket::~ListeningSocket()
 {
-  int r = bind(sockfd, (struct sockaddr *)&serverAddr.addr, serverAddr.addrLen);
+  close(m_listen_fd);
+}
+
+void ListeningSocket::Bind() const
+{
+  int r = bind(
+      m_listen_fd, (struct sockaddr *)&serverAddr.addr, serverAddr.addrLen);
 
   if (r < 0) {
     perror("bind");
@@ -37,20 +43,23 @@ void Socket::Bind() const
   }
 }
 
-void Socket::Accept()
+ClientSocket ListeningSocket::Accept()
 {
-  clientfd =
-      accept(sockfd, (struct sockaddr *)&clientAddr.addr, &clientAddr.addrLen);
+  Address clientAddr = {0};
+  int client_fd      = accept(
+      m_listen_fd, (struct sockaddr *)&clientAddr.addr, &clientAddr.addrLen);
 
-  if (clientfd < 0) {
+  if (client_fd < 0) {
     perror("accept");
     exit(EXIT_FAILURE);
   }
+
+  return ClientSocket(client_fd, clientAddr);
 }
 
-void Socket::Listen() const
+void ListeningSocket::Listen() const
 {
-  int r = listen(sockfd, 5);
+  int r = listen(m_listen_fd, 5);
 
   if (r < 0) {
     perror("listen");
@@ -58,18 +67,24 @@ void Socket::Listen() const
   }
 }
 
-void Socket::Close()
+void ListeningSocket::Close()
 {
-  close(clientfd);
-  clientfd = -1;
+  close(m_listen_fd);
+  m_listen_fd = -1;
 }
 
-int Socket::readHeader(std::string &buf) const
+void amk::ClientSocket::Close()
+{
+  close(m_client_fd);
+  m_client_fd = -1;
+}
+
+int ClientSocket::readHeader(std::string &buf) const
 {
   buf.resize(max_header_size);
   int totalBytes = 0;
   while (1) {
-    int br = recv(clientfd, &buf[0], max_header_size, 0);
+    int br = recv(m_client_fd, &buf[0], max_header_size, 0);
     if (br < 0) {
       perror("recv");
       exit(EXIT_FAILURE);
@@ -90,13 +105,13 @@ int Socket::readHeader(std::string &buf) const
   return totalBytes;
 }
 
-bool Socket::Send(const std::string &buf) const
+bool ClientSocket::Send(const std::string &buf) const
 {
   int startFrom = 0;
   int bytesLeft = buf.size();
 
   while (1) {
-    int bs = send(clientfd, buf.c_str() + startFrom, bytesLeft, 0);
+    int bs = send(m_client_fd, buf.c_str() + startFrom, bytesLeft, 0);
 
     if (bs <= 0) {
       return false;
@@ -114,13 +129,13 @@ bool Socket::Send(const std::string &buf) const
   return true;
 }
 
-bool Socket::SendFile(int fd, int size) const
+bool ClientSocket::SendFile(int fd, int size) const
 {
   int startFrom = 0;
   int bytesLeft = size;
 
   while (1) {
-    int bs = sendfile(clientfd, fd, 0, bytesLeft);
+    int bs = sendfile(m_client_fd, fd, 0, bytesLeft);
 
     if (bs <= 0) {
       return false;
@@ -137,16 +152,40 @@ bool Socket::SendFile(int fd, int size) const
   return true;
 }
 
-void Socket::cork() const
+void ClientSocket::cork() const
 {
   int state = 1;
-  setsockopt(clientfd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+  setsockopt(m_client_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
   std::cout << "corked" << std::endl;
 }
 
-void Socket::uncork() const
+void ClientSocket::uncork() const
 {
   int state = 0;
-  setsockopt(clientfd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+  setsockopt(m_client_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
   std::cout << "uncorked" << std::endl;
+}
+
+void amk::ClientSocket::set_keep_alive() const
+{
+  int state = 1;
+  setsockopt(m_client_fd, SOL_SOCKET, SO_KEEPALIVE, &state, sizeof(state));
+  std::cout << "keep alive set" << std::endl;
+}
+
+void amk::ClientSocket::unset_keep_alive() const
+{
+  int state = 0;
+  setsockopt(m_client_fd, SOL_SOCKET, SO_KEEPALIVE, &state, sizeof(state));
+  std::cout << "keep alive unset" << std::endl;
+}
+
+amk::ClientSocket::~ClientSocket()
+{
+  close(m_client_fd);
+}
+
+ClientSocket::ClientSocket(int client_fd, Address client_addr)
+    : m_client_fd(client_fd), clientAddr(client_addr)
+{
 }

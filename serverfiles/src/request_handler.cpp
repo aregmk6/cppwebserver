@@ -21,22 +21,22 @@ void ReqHandler::handle_get(path &uri)
   }
 
   switch (it_exten->second) {
-  case fileType::HTML:
+  case file_type::HTML:
     FNL_TYPE = CNT_TYPE + std::string("text/html; charset=UTF-8") + delim;
     break;
-  case fileType::CSS:
+  case file_type::CSS:
     FNL_TYPE = CNT_TYPE + std::string("text/css; charset=UTF-8") + delim;
     break;
-  case fileType::JS:
+  case file_type::JS:
     FNL_TYPE = CNT_TYPE + std::string("text/javascript") + delim;
     break;
-  case fileType::PNG:
+  case file_type::PNG:
     FNL_TYPE = CNT_TYPE + std::string("image/png") + delim;
     break;
-  case fileType::JPEG:
+  case file_type::JPEG:
     FNL_TYPE = CNT_TYPE + std::string("image/jpeg") + delim;
     break;
-  case fileType::JPG:
+  case file_type::JPG:
     FNL_TYPE = CNT_TYPE + std::string("image/jpg") + delim;
     break;
   }

@@ -2,19 +2,11 @@
 #define SERVER_H
 
 #include "amk_socket.h"
-#include "threadPool.h"
+#include "thread_pool.h"
 
-#include <filesystem>
-#include <memory>
 #include <netinet/in.h>
-#include <string>
-#include <string_view>
 #include <sys/socket.h>
-#include <unordered_map>
-
-enum class HttpMethod { GET, POST, PUT };
-enum class HttpVersion { LEGACY, ONE, TWO, THREE };
-enum class fileType { HTML, CSS, JS, PNG, JPEG, JPG };
+#include <thread>
 
 namespace amk
 {
@@ -22,13 +14,13 @@ namespace amk
 class Server
 {
 public:
-  Socket socket;
-  std::string buff;
-
-  Server();
+  Server(int thread_pool_size = std::thread::hardware_concurrency());
+  [[nodiscard]] ClientSocket wait_for_connection();
+  void send_client(ClientSocket &client_conn);
 
 private:
-  ThreadPool m_tpool;
+  ThreadPool m_thpool;
+  ListeningSocket m_listening_socket;
 };
 
 } // namespace amk

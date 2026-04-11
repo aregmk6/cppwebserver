@@ -23,7 +23,16 @@ std::string amk::Request::get_req() const
 
   return output.str();
 }
+
 bool Request::is_keep_alive() const
 {
   return m_keep_alive;
+}
+bool amk::Request::is_valid() const
+{
+  return m_valid;
+}
+void amk::Request::invalidate()
+{
+  m_valid = false;
 }

@@ -24,6 +24,7 @@ public:
 private:
   int file_descriptor;
   size_t file_size;
+
   void calc_file_size();
 };
 

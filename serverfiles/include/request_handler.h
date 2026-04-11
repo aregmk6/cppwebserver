@@ -3,6 +3,7 @@
 
 #include "amk_socket.h"
 #include "request.h"
+#include "request_parser.h"
 
 #include <filesystem>
 
@@ -14,11 +15,16 @@ using std::filesystem::path;
 class ReqHandler
 {
 public:
+  void handle(ClientSocket &new_conn);
+
+private:
+  Request &parse(); // return m_cur_req;
   void handle(Request &req);
   void handle_get(path &uri);
 
-private:
-  Socket m_socket;
+  ClientSocket m_client_socket;
+  ReqParser m_parser;
+  Request m_cur_req;
 };
 
 } // namespace amk

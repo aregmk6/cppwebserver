@@ -1,10 +1,12 @@
-#include "threadPool.h"
+#include "thread_pool.h"
+
+#include "amk_socket.h"
 
 using namespace amk;
 
 ThreadPool::ThreadPool(int pool_size)
     : m_pool_size(pool_size), m_workers(m_pool_size), loop_predicate([this]() {
-        return !m_jobs_queue.empty() && !m_should_terminate;
+        return !m_client_queue.empty() && !m_should_terminate;
       })
 {
   for (int i = 0; i < m_pool_size; ++i) {
@@ -24,16 +26,28 @@ amk::ThreadPool::~ThreadPool()
   }
   m_workers.clear();
 }
+
+void amk::ThreadPool::add_client(ClientSocket &client_conn)
+{
+  {
+    std::lock_guard lock(m_queue_mutex);
+    m_client_queue.push(client_conn);
+  }
+
+  m_queue_cond.notify_one();
+}
+
 bool amk::ThreadPool::is_busy() const
 {
   std::lock_guard queue_lock(m_queue_mutex);
-  return !m_jobs_queue.empty();
+  return !m_client_queue.empty();
 }
 
 void amk::ThreadPool::threadLoop()
 {
+  std::string cur_req_buff;
+  ClientSocket new_conn;
   while (true) {
-    std::function<void()> job;
     {
       std::unique_lock lock(m_queue_mutex);
       m_queue_cond.wait(lock, loop_predicate);
@@ -41,9 +55,12 @@ void amk::ThreadPool::threadLoop()
         // thread just finishes
         return;
       }
-      job = m_jobs_queue.back();
-      m_jobs_queue.pop();
+      new_conn = m_client_queue.back();
+      m_client_queue.pop();
     }
-    job();
+
+    m_handler.handle(new_conn);
+
+    new_conn.Close();
   }
 }

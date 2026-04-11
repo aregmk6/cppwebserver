@@ -1,6 +1,11 @@
 target_sources(server
-		PRIVATE main.cpp
-		PRIVATE server.cpp
-		PRIVATE amk_socket.cpp
-		PRIVATE file.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/amk_socket.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/file.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/request.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/request_handler.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/request_parser.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/response.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
+	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/thread_pool.cpp
 )
