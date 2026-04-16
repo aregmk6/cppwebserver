@@ -2,4 +2,5 @@
 build/
 webfiles/
 notes.md
+public/
 .env
