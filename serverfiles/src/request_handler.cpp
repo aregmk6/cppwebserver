@@ -20,7 +20,7 @@ void amk::ReqHandler::parse()
 {
   m_client_socket.read_header();
   m_cur_req = m_parser.parse(m_client_socket.get_buf());
-  if (m_parser.check_result() == ReqParser::parse_res::failure) {
+  if (m_parser.check_result() == ReqParser::parse_res::ParsingError) {
     m_cur_req.invalidate();
     std::cerr << "parser error" << std::endl;
     return;

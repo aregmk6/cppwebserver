@@ -20,15 +20,23 @@ public:
   };
 
   std::string get_req() const;
-  bool is_keep_alive() const;
-  bool is_valid() const;
-  void invalidate();
+  bool is_keep_alive() const
+  {
+    return m_keep_alive;
+  }
+  bool is_valid() const
+  {
+    return m_valid;
+  }
+  void invalidate()
+  {
+    m_valid = false;
+  }
 
-private:
-  std::string method;
-  std::string uri;
-  int ver_major = 0;
-  int ver_minor = 0;
+  std::string m_method;
+  std::string m_uri;
+  int m_ver_major = 0;
+  int m_ver_minor = 0;
   std::vector<HeaderPair> m_headers;
   std::string m_body;
   bool m_keep_alive = false;
