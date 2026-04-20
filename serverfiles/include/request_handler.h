@@ -22,9 +22,9 @@ public:
 
 private:
   void parse();
-  void handle(Request &req);
+  void handle(const Request &req);
 
-  void handle_get(path &uri);
+  void handle_get(const path &uri);
 
   ClientSocket m_client_socket;
   ReqParser m_parser;

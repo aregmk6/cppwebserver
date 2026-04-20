@@ -24,8 +24,9 @@ public:
   const std::string &header() const;
 
 private:
-  std::string final_header;
-  std::string final_body;
+  std::string m_final_header;
+  std::string m_final_body;
+  bool m_body_is_file = false;
 
   enum http_method { GET, POST, PUT };
   enum http_version { LEGACY, ONE, TWO, THREE };

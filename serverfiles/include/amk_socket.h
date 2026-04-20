@@ -30,7 +30,7 @@ public:
   void Close();
 
   int read_header();
-  void send_response(const File &src);
+  void send_response(const Response &res, const File &src);
   const std::string &get_buf() const;
 
 private:

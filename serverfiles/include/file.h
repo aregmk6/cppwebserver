@@ -16,7 +16,7 @@ class File
 {
 public:
   enum class open_mode { read, write, read_write };
-  File(path src, open_mode mode);
+  File(const path &src, open_mode mode);
   ~File();
   size_t get_size() const;
   const path get_extension() const;

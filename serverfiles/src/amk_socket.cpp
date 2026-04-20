@@ -105,12 +105,10 @@ int ClientSocket::read_header()
 
   return totalBytes;
 }
-void amk::ClientSocket::send_response(const File &src)
+void amk::ClientSocket::send_response(const Response &res, const File &src)
 {
-  Response resp(src);
-
   cork();
-  send_header(resp);
+  send_header(res);
   send_body(src);
   uncork();
 }

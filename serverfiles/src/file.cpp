@@ -2,7 +2,7 @@
 
 using namespace amk;
 
-File::File(path src, open_mode mode)
+File::File(const path &src, open_mode mode)
 {
   file_path = src;
   switch (mode) {

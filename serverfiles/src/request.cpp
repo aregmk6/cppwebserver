@@ -5,9 +5,9 @@ using namespace amk;
 std::string amk::Request::get_req() const
 {
   std::stringstream output;
-  output << method << ' '                            //
-         << uri << ' '                               //
-         << "HTTP/" << ver_major << '.' << ver_minor //
+  output << m_method << ' '                              //
+         << m_uri << ' '                                 //
+         << "HTTP/" << m_ver_major << '.' << m_ver_minor //
          << delim;
 
   for (const auto &HeaderPair : m_headers) {

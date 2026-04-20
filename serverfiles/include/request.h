@@ -20,18 +20,9 @@ public:
   };
 
   std::string get_req() const;
-  bool is_keep_alive() const
-  {
-    return m_keep_alive;
-  }
-  bool is_valid() const
-  {
-    return m_valid;
-  }
-  void invalidate()
-  {
-    m_valid = false;
-  }
+  bool is_keep_alive() const;
+  bool is_valid() const;
+  void invalidate();
 
   std::string m_method;
   std::string m_uri;
@@ -41,7 +32,7 @@ public:
   std::string m_body;
   bool m_keep_alive = false;
 
-  bool m_valid = false;
+  bool m_valid = true;
 };
 
 } // namespace amk

@@ -30,15 +30,16 @@ const std::unordered_map<std::string_view, Response::file_type>
 amk::Response::Response(const amk::File &file)
 {
   std::stringstream res;
-  auto it_exten = file_type_map.find(file.get_extension().c_str());
-  if (it_exten == file_type_map.end()) {
+  auto extension_itr = file_type_map.find(file.get_extension().c_str());
+  if (extension_itr == file_type_map.end()) {
     std::cerr << "extention not supported" << std::endl;
   }
+  m_body_is_file = true;
 
   res << ok_msg << delim                             //
       << cnt_len << ' ' << file.get_size() << delim; //
 
-  switch (it_exten->second) {
+  switch (extension_itr->second) {
   case file_type::HTML:
     res << cnt_type << ' ' << html << delim;
     break;
@@ -60,10 +61,10 @@ amk::Response::Response(const amk::File &file)
   }
 
   res << delim;
-  final_header = res.str();
+  m_final_header = res.str();
   // body will be sent with zero copy by the socket
 }
 const std::string &amk::Response::header() const
 {
-  return final_header;
+  return m_final_header;
 }

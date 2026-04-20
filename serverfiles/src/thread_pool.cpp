@@ -46,7 +46,7 @@ bool amk::ThreadPool::is_busy() const
 void amk::ThreadPool::threadLoop()
 {
   std::string cur_req_buff;
-  ClientSocket new_conn;
+  ClientSocket cur_client;
   ReqHandler handler;
   while (true) {
     {
@@ -55,12 +55,12 @@ void amk::ThreadPool::threadLoop()
       if (m_should_terminate) {
         return;
       }
-      new_conn = m_client_queue.back();
+      cur_client = m_client_queue.back();
       m_client_queue.pop();
     }
 
-    handler.handle_conn(new_conn);
+    handler.handle_conn(cur_client);
 
-    new_conn.Close();
+    cur_client.Close();
   }
 }

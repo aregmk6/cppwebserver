@@ -7,6 +7,8 @@
 using namespace amk;
 
 // TODO: change strcasecmp to system indepednent
+// TODO: check if strtol is system depedndent
+// TODO: make isDigit, isControl, isSpecial, ... into macros
 
 amk::Request amk::ReqParser::parse(const std::string &req_str)
 {
