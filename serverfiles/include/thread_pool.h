@@ -21,7 +21,7 @@ public:
   ~ThreadPool();
 
   void add_client(ClientSocket &client_conn);
-  bool is_busy() const;
+  bool is_busy();
 
 private:
   void threadLoop();

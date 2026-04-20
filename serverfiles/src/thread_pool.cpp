@@ -37,7 +37,7 @@ void amk::ThreadPool::add_client(ClientSocket &client_conn)
   m_queue_cond.notify_one();
 }
 
-bool amk::ThreadPool::is_busy() const
+bool amk::ThreadPool::is_busy()
 {
   std::lock_guard queue_lock(m_queue_mutex);
   return !m_client_queue.empty();
