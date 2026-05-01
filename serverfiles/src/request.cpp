@@ -1,9 +1,11 @@
 #include "request.h"
+#include "utils.h"
+
+#include <sstream>
 
 using namespace amk;
 
-std::string amk::Request::get_req() const
-{
+std::string amk::Request::get_req() const {
   std::stringstream output;
   output << m_method << ' '                              //
          << m_uri << ' '                                 //
@@ -24,15 +26,6 @@ std::string amk::Request::get_req() const
   return output.str();
 }
 
-bool Request::is_keep_alive() const
-{
-  return m_keep_alive;
-}
-bool amk::Request::is_valid() const
-{
-  return m_valid;
-}
-void amk::Request::invalidate()
-{
-  m_valid = false;
-}
+bool Request::is_keep_alive() const { return m_keep_alive; }
+bool amk::Request::is_valid() const { return m_valid; }
+void amk::Request::invalidate() { m_valid = false; }

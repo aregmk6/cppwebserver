@@ -1,8 +1,10 @@
-#include "amk_socket.h"
+#include "mysocket.h"
 
 #include "response.h"
 #include "utils.h"
 
+#include <cerrno>
+#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -14,29 +16,24 @@
 
 using namespace amk;
 
-ListeningSocket::ListeningSocket()
-{
+ListeningSocket::ListeningSocket(int port_) : port(port_) {
   m_listen_fd = socket(AF_INET, SOCK_STREAM, 0);
   if (m_listen_fd < 0) {
     perror("socket");
     exit(EXIT_FAILURE);
   }
 
-  serverAddr.addr.sin_family      = AF_INET;
-  serverAddr.addr.sin_port        = htons(8080);
+  serverAddr.addr.sin_family = AF_INET;
+  serverAddr.addr.sin_port = htons(port_);
   serverAddr.addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-  serverAddr.addrLen              = sizeof(serverAddr.addr);
+  serverAddr.addrLen = sizeof(serverAddr.addr);
 }
 
-ListeningSocket::~ListeningSocket()
-{
-  close(m_listen_fd);
-}
+ListeningSocket::~ListeningSocket() { close(m_listen_fd); }
 
-void ListeningSocket::Bind() const
-{
-  int r = bind(
-      m_listen_fd, (struct sockaddr *)&serverAddr.addr, serverAddr.addrLen);
+void ListeningSocket::Bind() const {
+  int r = bind(m_listen_fd, (struct sockaddr *)&serverAddr.addr,
+               serverAddr.addrLen);
 
   if (r < 0) {
     perror("bind");
@@ -44,22 +41,24 @@ void ListeningSocket::Bind() const
   }
 }
 
-ClientSocket ListeningSocket::Accept()
-{
+ClientSocket ListeningSocket::Accept() {
   Address clientAddr = {0};
-  int client_fd      = accept(
-      m_listen_fd, (struct sockaddr *)&clientAddr.addr, &clientAddr.addrLen);
+  int client_fd = accept(m_listen_fd, (struct sockaddr *)&clientAddr.addr,
+                         &clientAddr.addrLen);
 
   if (client_fd < 0) {
-    perror("accept");
-    exit(EXIT_FAILURE);
+    if (errno == SIGINT) {
+      return ClientSocket();
+    } else {
+      perror("accept");
+      exit(EXIT_FAILURE);
+    }
   }
 
   return ClientSocket(client_fd, clientAddr);
 }
 
-void ListeningSocket::Listen() const
-{
+void ListeningSocket::Listen() const {
   int r = listen(m_listen_fd, 5);
 
   if (r < 0) {
@@ -68,20 +67,17 @@ void ListeningSocket::Listen() const
   }
 }
 
-void ListeningSocket::Close()
-{
+void ListeningSocket::Close() {
   close(m_listen_fd);
   m_listen_fd = -1;
 }
 
-void amk::ClientSocket::Close()
-{
+void amk::ClientSocket::Close() {
   close(m_client_fd);
   m_client_fd = -1;
 }
 
-int ClientSocket::read_header()
-{
+int ClientSocket::read_header() {
   buf.resize(max_header_size);
   int totalBytes = 0;
   while (true) {
@@ -105,20 +101,15 @@ int ClientSocket::read_header()
 
   return totalBytes;
 }
-void amk::ClientSocket::send_response(const Response &res, const File &src)
-{
+void amk::ClientSocket::send_response(const Response &res) {
   cork();
   send_header(res);
-  send_body(src);
+  send_body(res.get_file());
   uncork();
 }
-const std::string &amk::ClientSocket::get_buf() const
-{
-  return buf;
-}
+const std::string &amk::ClientSocket::get_buf() const { return buf; }
 
-bool ClientSocket::send_header(const Response &resp) const
-{
+bool ClientSocket::send_header(const Response &resp) const {
   int startFrom = 0;
   int bytesLeft = resp.header().size();
 
@@ -141,8 +132,7 @@ bool ClientSocket::send_header(const Response &resp) const
   return true;
 }
 
-bool ClientSocket::send_body(const File &src) const
-{
+bool ClientSocket::send_body(const File &src) const {
   int startFrom = 0;
   int bytesLeft = src.get_size();
 
@@ -164,40 +154,34 @@ bool ClientSocket::send_body(const File &src) const
   return true;
 }
 
-void ClientSocket::cork() const
-{
+void ClientSocket::cork() const {
   int state = 1;
   setsockopt(m_client_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
   std::cout << "corked" << std::endl;
 }
 
-void ClientSocket::uncork() const
-{
+void ClientSocket::uncork() const {
   int state = 0;
   setsockopt(m_client_fd, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
   std::cout << "uncorked" << std::endl;
 }
 
-void amk::ClientSocket::set_keep_alive() const
-{
+void amk::ClientSocket::set_keep_alive() const {
   int state = 1;
   setsockopt(m_client_fd, SOL_SOCKET, SO_KEEPALIVE, &state, sizeof(state));
   std::cout << "keep alive set" << std::endl;
 }
 
-void amk::ClientSocket::unset_keep_alive() const
-{
+void amk::ClientSocket::unset_keep_alive() const {
   int state = 0;
   setsockopt(m_client_fd, SOL_SOCKET, SO_KEEPALIVE, &state, sizeof(state));
   std::cout << "keep alive unset" << std::endl;
 }
 
-amk::ClientSocket::~ClientSocket()
-{
-  close(m_client_fd);
+amk::ClientSocket::~ClientSocket() {
+  if (m_client_fd != -1)
+    close(m_client_fd);
 }
 
 ClientSocket::ClientSocket(int client_fd, Address client_addr)
-    : m_client_fd(client_fd), clientAddr(client_addr)
-{
-}
+    : m_client_fd(client_fd), clientAddr(client_addr) {}

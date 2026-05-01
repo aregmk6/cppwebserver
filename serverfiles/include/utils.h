@@ -1,14 +1,22 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-namespace amk
-{
+#include <string>
+
+namespace amk {
+
+struct Logger {
+  void log(const char *str);
+  void log(const std::string &str);
+
+  std::string user;
+};
 
 constexpr char header_end[] = "\r\n\r\n";
-constexpr char delim[]      = "\r\n";
-constexpr char space        = ' ';
+constexpr char delim[] = "\r\n";
+constexpr char space = ' ';
 
-constexpr int max_header_size        = 1024 * 8;
+constexpr int max_header_size = 1024 * 8;
 constexpr int first_line_header_size = 3;
 
 // errors

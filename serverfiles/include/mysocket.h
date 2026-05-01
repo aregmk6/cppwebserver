@@ -5,32 +5,45 @@
 #include "response.h"
 
 #include <asm-generic/socket.h>
-#include <iostream>
 #include <netinet/in.h>
 #include <string>
 #include <sys/socket.h>
 #include <unistd.h>
 
-namespace amk
-{
+namespace amk {
 
 struct Address {
   struct sockaddr_in addr = {0};
-  socklen_t addrLen       = 0;
+  socklen_t addrLen = 0;
 };
 
-class ClientSocket
-{
+class ClientSocket {
 public:
   ClientSocket() = default;
   ~ClientSocket();
+  ClientSocket(const ClientSocket &) = delete;
+  ClientSocket &operator=(const ClientSocket &) = delete;
+  ClientSocket(ClientSocket &&other) {
+    m_client_fd = other.m_client_fd;
+    other.m_client_fd = -1;
+
+    clientAddr = other.clientAddr;
+  }
+  ClientSocket &operator=(ClientSocket &&other) {
+    m_client_fd = other.m_client_fd;
+    other.m_client_fd = -1;
+
+    clientAddr = other.clientAddr;
+
+    return *this;
+  }
   ClientSocket(int client_fd, Address client_addr);
   int m_client_fd = -1;
 
   void Close();
 
   int read_header();
-  void send_response(const Response &res, const File &src);
+  void send_response(const Response &res);
   const std::string &get_buf() const;
 
 private:
@@ -45,10 +58,9 @@ private:
   Address clientAddr = {0};
 };
 
-class ListeningSocket
-{
+class ListeningSocket {
 public:
-  ListeningSocket(); /* TCP socket */
+  ListeningSocket(int port_); /* TCP socket */
   ~ListeningSocket();
   int m_listen_fd;
 
@@ -59,6 +71,7 @@ public:
 
 private:
   Address serverAddr = {0};
+  int port;
 };
 
 } // namespace amk

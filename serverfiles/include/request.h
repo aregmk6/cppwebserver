@@ -1,19 +1,12 @@
 #ifndef REQUEST_H
 #define REQUEST_H
 
-#include "utils.h"
-
-#include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
-namespace amk
-{
+namespace amk {
 
-class Request
-{
-public:
+struct Request {
   struct HeaderPair {
     std::string m_name;
     std::string m_value;

@@ -1,17 +1,15 @@
-#ifndef REQ_PARSER_H
-#define REQ_PARSER_H
+#ifndef PARSER_H
+#define PARSER_H
 
-#include "amk_socket.h"
+#include "mysocket.h"
 #include "request.h"
 
+#include <filesystem>
 #include <string>
-#include <strings.h>
 
-namespace amk
-{
+namespace amk {
 
-class ReqParser
-{
+class ReqParser {
 public:
   enum parse_res { ParsingCompleted, ParsingIncompleted, ParsingError };
 
@@ -91,12 +89,30 @@ private:
 
   parse_res m_cur_result = ParsingIncompleted;
 
-  int m_body_size    = 0;
-  int m_chunk_size   = 0;
+  int m_body_size = 0;
+  int m_chunk_size = 0;
   bool m_is_chuncked = false;
   std::string chunkSizeStr;
 
   ClientSocket m_client_socket;
+};
+
+using std::filesystem::path;
+
+class ReqHandler {
+public:
+  bool handle_conn(ClientSocket &new_conn);
+
+private:
+  bool checkUri(std::filesystem::path p);
+  void parse(ClientSocket &conn);
+  void handle(const Request &req, ClientSocket &conn);
+
+  void handle_get(const path &uri, ClientSocket &conn);
+
+  ClientSocket m_client_socket;
+  ReqParser m_parser;
+  Request m_cur_req;
 };
 
 } // namespace amk

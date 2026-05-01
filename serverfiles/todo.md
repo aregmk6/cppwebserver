@@ -1,1 +1,1 @@
-[ ] - change fields in Request to be enums instead of strings.
+[ ] - add timer to connections in the queue. 

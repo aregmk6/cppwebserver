@@ -1,22 +1,29 @@
-#include "amk_socket.h"
+#include "mysocket.h"
 #include "server.h"
+#include "utils.h"
 
-#include <iostream>
 #include <unistd.h>
 
 using namespace amk;
 
-int main()
-{
-  Server server;
+int main() {
+  Logger logger{"master"};
+  Server &server = Server::create_instance(6969);
 
   while (true) {
+    logger.log("waiting for connection...");
+
     ClientSocket client_conn = server.wait_for_connection();
 
-    std::cout << "accepted" << std::endl;
+    if (server.should_stop())
+      break;
+
+    logger.log("accepted");
 
     server.send_client(client_conn);
 
-    std::cout << "sent off" << std::endl;
+    logger.log("sent off");
   };
+
+  server.shutdown();
 }

@@ -1,30 +1,27 @@
-#include "request_parser.h"
+#include "parser.h"
 
+#include "file.h"
+#include "request.h"
 #include <algorithm>
 #include <cctype>
+#include <cstring>
 #include <ctype.h>
+#include <filesystem>
+#include <iostream>
+#include <strings.h>
 
 using namespace amk;
 
-// TODO: change strcasecmp to system indepednent
-// TODO: check if strtol is system depedndent
-// TODO: make isDigit, isControl, isSpecial, ... into macros
-
-amk::Request amk::ReqParser::parse(const std::string &req_str)
-{
+amk::Request amk::ReqParser::parse(const std::string &req_str) {
   Request new_req;
   m_cur_result =
       consume(new_req, req_str.c_str(), req_str.c_str() + req_str.size());
   return new_req;
 }
 
-ReqParser::parse_res ReqParser::check_result() const
-{
-  return m_cur_result;
-}
+ReqParser::parse_res ReqParser::check_result() const { return m_cur_result; }
 
-bool amk::ReqParser::checkIfConnection(const Request::HeaderPair &item)
-{
+bool amk::ReqParser::checkIfConnection(const Request::HeaderPair &item) {
   std::string lower = item.m_name;
   for (auto &ch : lower) {
     ch = std::tolower(ch);
@@ -33,8 +30,7 @@ bool amk::ReqParser::checkIfConnection(const Request::HeaderPair &item)
 }
 
 amk::ReqParser::parse_res
-amk::ReqParser::consume(Request &req, const char *begin, const char *end)
-{
+amk::ReqParser::consume(Request &req, const char *begin, const char *end) {
   while (begin != end) {
     char input = *begin++;
 
@@ -110,7 +106,7 @@ amk::ReqParser::consume(Request &req, const char *begin, const char *end)
       if (input == '/') {
         req.m_ver_major = 0;
         req.m_ver_minor = 0;
-        state           = RequestHttpVersion_majorStart;
+        state = RequestHttpVersion_majorStart;
       } else {
         return ParsingError;
       }
@@ -118,7 +114,7 @@ amk::ReqParser::consume(Request &req, const char *begin, const char *end)
     case RequestHttpVersion_majorStart:
       if (isDigit(input)) {
         req.m_ver_major = input - '0';
-        state           = RequestHttpVersion_major;
+        state = RequestHttpVersion_major;
       } else {
         return ParsingError;
       }
@@ -135,7 +131,7 @@ amk::ReqParser::consume(Request &req, const char *begin, const char *end)
     case RequestHttpVersion_minorStart:
       if (isDigit(input)) {
         req.m_ver_minor = input - '0';
-        state           = RequestHttpVersion_minor;
+        state = RequestHttpVersion_minor;
       } else {
         return ParsingError;
       }
@@ -226,8 +222,8 @@ amk::ReqParser::consume(Request &req, const char *begin, const char *end)
       }
       break;
     case ExpectingNewline_3: {
-      auto it = std::find_if(
-          req.m_headers.begin(), req.m_headers.end(), checkIfConnection);
+      auto it = std::find_if(req.m_headers.begin(), req.m_headers.end(),
+                             checkIfConnection);
 
       if (it != req.m_headers.end()) {
         if (strcasecmp(it->m_value.c_str(), "Keep-Alive") == 0) {
@@ -369,16 +365,11 @@ amk::ReqParser::consume(Request &req, const char *begin, const char *end)
 
   return ParsingIncompleted;
 }
-bool amk::ReqParser::isChar(int c)
-{
-  return c >= 0 && c <= 127;
-}
-bool amk::ReqParser::isControl(int c)
-{
+bool amk::ReqParser::isChar(int c) { return c >= 0 && c <= 127; }
+bool amk::ReqParser::isControl(int c) {
   return (c >= 0 && c <= 31) || (c == 127);
 }
-bool amk::ReqParser::isSpecial(int c)
-{
+bool amk::ReqParser::isSpecial(int c) {
   switch (c) {
   case '(':
   case ')':
@@ -404,7 +395,62 @@ bool amk::ReqParser::isSpecial(int c)
     return false;
   }
 }
-bool amk::ReqParser::isDigit(int c)
-{
-  return c >= '0' && c <= '9';
+
+bool amk::ReqParser::isDigit(int c) { return c >= '0' && c <= '9'; }
+
+bool ReqHandler::handle_conn(ClientSocket &new_conn) {
+  parse(new_conn);
+  if (m_cur_req.is_valid()) {
+    handle(m_cur_req, new_conn);
+  }
+
+  return m_cur_req.m_keep_alive;
+}
+
+void ReqHandler::parse(ClientSocket &conn) {
+  conn.read_header();
+  m_cur_req = m_parser.parse(conn.get_buf());
+  if (m_parser.check_result() == ReqParser::parse_res::ParsingError) {
+    m_cur_req.invalidate();
+    std::cerr << "parser error" << std::endl;
+  }
+}
+
+// TODO: change the methods to enums to support cases.
+void ReqHandler::handle(const Request &req, ClientSocket &conn) {
+  using std::filesystem::equivalent;
+  using std::filesystem::path;
+  path real_path = req.m_uri;
+  if (std::strstr(real_path.c_str(), "../") ||
+      std::strstr(real_path.c_str(), "./")) {
+    std::cout << "illigal path" << std::endl;
+    return;
+  }
+  if (equivalent(real_path, "/")) {
+    real_path =
+        "/home/aregmk/coding/web/cppserver/serverfiles/public/index.html";
+  } else {
+    real_path =
+        "/home/aregmk/coding/web/cppserver/serverfiles/public" / real_path;
+  }
+  std::cout << "real path: " << real_path << std::endl;
+  if (req.m_method == "GET") {
+    handle_get(real_path, conn);
+  } // else if (POST) {
+    // ...
+    // } else ...
+}
+
+void ReqHandler::handle_get(const path &uri, ClientSocket &conn) {
+
+  std::cout << "cur file uri: " << uri << std::endl;
+
+  Response res;
+  bool ret = res.attach_file(File{uri});
+  if (!ret) {
+    std::cout << "send failed " << std::endl;
+    return;
+  }
+
+  conn.send_response(res);
 }
