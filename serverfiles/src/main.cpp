@@ -10,6 +10,7 @@
 #include <mutex>
 #include <netinet/in.h>
 #include <queue>
+#include <sstream>
 #include <string>
 #include <sys/socket.h>
 #include <thread>
@@ -287,6 +288,7 @@ class Server
             bytes_rcvd = recv(conn.get_fd(), //
                               (void*)buffer, //
                               sizeof(buffer), rcv_flag);
+            std::cout << "BYTES RECIEVED: " << bytes_rcvd << std::endl;
             if (bytes_rcvd == 0) {
                 return false;
             } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
@@ -337,7 +339,8 @@ class Server
                     break;
                 } // Good request:
                 else {
-                    std::cout << req.inspect() << std::endl;
+                    // std::cout << req.inspect() << std::endl;
+                    std::cout << rcv_msg_ << std::endl;
 
                     int cerr = send(conn.get_fd(), kBoilerplateHtml,
                                     sizeof(kBoilerplateHtml), 0);

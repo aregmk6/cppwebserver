@@ -187,7 +187,7 @@ class HttpRequestParser
 {
   public:
     HttpRequestParser()
-        : state(RequestMethodStart), contentSize_(0), chunkSize_(0),
+        : state(RequestMethodStart), content_size_(0), chunkSize_(0),
           chunked_(false)
     {
     }
@@ -391,8 +391,8 @@ class HttpRequestParser
                         Request::HeaderItem& h = req.headers_.back();
 
                         if (strcasecmp(h.name.c_str(), "Content-Length") == 0) {
-                            contentSize_ = atoi(h.value.c_str());
-                            req.content_.reserve(contentSize_);
+                            content_size_ = atoi(h.value.c_str());
+                            req.content_.reserve(content_size_);
                         } else if (strcasecmp(h.name.c_str(),
                                               "Transfer-Encoding") == 0) {
                             if (strcasecmp(h.value.c_str(), "chunked") == 0)
@@ -432,7 +432,7 @@ class HttpRequestParser
 
                 if (chunked_) {
                     state = ChunkSize;
-                } else if (contentSize_ == 0) {
+                } else if (content_size_ == 0) {
                     if (input == '\n')
                         return ParsingCompleted;
                     else
@@ -443,16 +443,16 @@ class HttpRequestParser
                 break;
             }
             case Post:
-                --contentSize_;
+                --content_size_;
                 req.content_.push_back(input);
 
-                if (contentSize_ == 0) {
+                if (content_size_ == 0) {
                     return ParsingCompleted;
                 }
                 break;
             case ChunkSize:
                 if (isalnum(input)) {
-                    chunkSizeStr_.push_back(input);
+                    chunk_size_str_.push_back(input);
                 } else if (input == ';') {
                     state = ChunkExtensionName;
                 } else if (input == '\r') {
@@ -483,8 +483,8 @@ class HttpRequestParser
                 break;
             case ChunkSizeNewLine:
                 if (input == '\n') {
-                    chunkSize_ = strtol(chunkSizeStr_.c_str(), NULL, 16);
-                    chunkSizeStr_.clear();
+                    chunkSize_ = strtol(chunk_size_str_.c_str(), NULL, 16);
+                    chunk_size_str_.clear();
                     req.content_.reserve(req.content_.size() + chunkSize_);
 
                     if (chunkSize_ == 0)
@@ -659,8 +659,8 @@ class HttpRequestParser
         ChunkData,
     } state;
 
-    size_t contentSize_;
-    std::string chunkSizeStr_;
+    size_t content_size_;
+    std::string chunk_size_str_;
     size_t chunkSize_;
     bool chunked_;
 };
