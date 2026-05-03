@@ -106,7 +106,7 @@ class Request
         std::string value;
     };
 
-    Request() : version_major_(0), version_minor_(0), keepAlive_(false)
+    Request() : version_major_(0), version_minor_(0), keep_alive_(false)
     {
     }
     Request(const Request& other)            = default;
@@ -129,7 +129,7 @@ class Request
 
         std::string data(content_.begin(), content_.end());
         stream << data << "\n";
-        stream << "+ keep-alive: " << keepAlive_ << "\n";
+        stream << "+ keep-alive: " << keep_alive_ << "\n";
         ;
         return stream.str();
     }
@@ -160,7 +160,17 @@ class Request
     }
     bool is_keepalive() const
     {
-        return keepAlive_;
+        return keep_alive_;
+    }
+    void reset()
+    {
+        method_.clear();
+        uri_.clear();
+        version_major_ = 0;
+        version_minor_ = 0;
+        headers_.clear();
+        content_.clear();
+        keep_alive_ = false;
     }
 
   private:
@@ -170,7 +180,7 @@ class Request
     int version_minor_;
     std::vector<HeaderItem> headers_;
     std::string content_;
-    bool keepAlive_;
+    bool keep_alive_;
 };
 
 class HttpRequestParser
@@ -189,6 +199,11 @@ class HttpRequestParser
     ~HttpRequestParser()                                   = default;
 
     enum ParseResult { ParsingCompleted, ParsingIncompleted, ParsingError };
+
+    void reset()
+    {
+        state = RequestMethodStart;
+    }
 
     ParseResult parse(Request& req, const char* begin, const char* end)
     {
@@ -405,15 +420,14 @@ class HttpRequestParser
 
                 if (it != req.headers_.end()) {
                     if (strcasecmp(it->value.c_str(), "Keep-Alive") == 0) {
-                        req.keepAlive_ = true;
-                    } else // == Close
-                    {
-                        req.keepAlive_ = false;
+                        req.keep_alive_ = true;
+                    } else { // == Close
+                        req.keep_alive_ = false;
                     }
                 } else {
                     if (req.version_major_ > 1 ||
                         (req.version_major_ == 1 && req.version_minor_ == 1))
-                        req.keepAlive_ = true;
+                        req.keep_alive_ = true;
                 }
 
                 if (chunked_) {

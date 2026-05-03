@@ -3,7 +3,6 @@
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
 #include <csignal>
-#include <cstddef>
 #include <filesystem>
 #include <functional>
 #include <iostream>
@@ -11,13 +10,10 @@
 #include <mutex>
 #include <netinet/in.h>
 #include <queue>
-#include <sstream>
-#include <string.h>
 #include <string>
 #include <sys/socket.h>
 #include <thread>
 #include <utility>
-#include <vector>
 
 #define CPPSERVER_CHECK_ERROR(error, name)                                     \
     do {                                                                       \
@@ -27,6 +23,16 @@
             abort();                                                           \
         }                                                                      \
     } while (0)
+
+constexpr char kBoilerplateHtml[] =
+    R"(HTTP/1.1 200 OK
+Date: Mon, 27 Jul 2024 12:28:53 GMT
+Server: Apache/2.4.1
+Content-Type: text/html; charset=utf-8
+Content-Length: 48
+
+<html><body><h1>Hello World!</h1></body></html>
+)";
 
 class ConnSock
 {
@@ -67,7 +73,7 @@ class ConnSock
         sockaddr_  = {0}; // TODO: check if this does what it's supposed to.
     }
 
-    int getFd() const
+    int get_fd() const
     {
         return fd_;
     }
@@ -257,55 +263,101 @@ class Server
     }
 
   private:
-    Server() = default;
-    Socket listener_;
+    static constexpr int kMaxBuffSize = 1024 * 4;
 
-    static constexpr int kBuffSize       = 1024 * 4;
-    inline static char buffer[kBuffSize] = {0};
+    Server()
+    {
+        rcv_msg_.reserve(kMaxBuffSize);
+    }
 
     static void pipeHandler(int signal)
     {
         std::cout << "SIGPIPE received" << std::endl;
     }
 
+    bool readClientMsg(const ConnSock& conn)
+    {
+        const char buffer[kMaxBuffSize] = {0};
+        bool first_loop                 = true;
+        int rcv_flag                    = 0;
+        int bytes_rcvd;
+
+        do {
+            errno      = 0;
+            bytes_rcvd = recv(conn.get_fd(), //
+                              (void*)buffer, //
+                              sizeof(buffer), rcv_flag);
+            if (bytes_rcvd == 0) {
+                return false;
+            } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
+                break;
+            }
+            CPPSERVER_CHECK_ERROR(bytes_rcvd, "recv");
+
+            rcv_msg_.append(buffer, bytes_rcvd);
+
+            if (first_loop) {
+                rcv_flag   = MSG_DONTWAIT;
+                first_loop = false;
+            }
+        } while (bytes_rcvd == kMaxBuffSize);
+
+        return true;
+    }
+
     void masterLoop()
     {
-        const char msg[] = "hello from server!";
         ConnSock conn{};
-
-        // debug -------
         HttpRequestParser parser{};
         Request req{};
-        // debug -------
 
         while (1) {
+            req.reset();
+            parser.reset();
+
             conn = listener_.accept();
 
             while (1) {
-                int cerr = recv(conn.getFd(), buffer, sizeof(buffer), 0);
-                if (cerr == 0) {
+                rcv_msg_.clear();
+
+                if (!readClientMsg(conn)) {
                     std::cout << "client left..." << std::endl;
                     break;
                 }
-                CPPSERVER_CHECK_ERROR(cerr, "recv");
 
-                std::cout << "Message from client: " << buffer << std::endl;
+                using ParseRes = HttpRequestParser::ParseResult;
+                ParseRes pres  = parser.parse(
+                    req, &rcv_msg_[0], &(rcv_msg_[0]) + rcv_msg_.length());
+                // chunked and not done:
+                if (pres == ParseRes::ParsingIncompleted) {
+                    continue;
+                } // actual bad http:
+                else if (pres == ParseRes::ParsingError) {
+                    std::cout << "BAD HTTP" << std::endl;
+                    break;
+                } // Good request:
+                else {
+                    std::cout << req.inspect() << std::endl;
 
-                // debug -------
-                parser.parse(req, buffer, buffer + sizeof(buffer));
-                std::cout << req.inspect() << std::endl;
-                // debug -------
+                    int cerr = send(conn.get_fd(), kBoilerplateHtml,
+                                    sizeof(kBoilerplateHtml), 0);
+                    if (cerr < 0) {
+                        if (errno == EPIPE) { // errno is thread-safe :D
+                            std::cout << "client closed the connection"
+                                      << std::endl;
+                            break;
+                        } else {
+                            std::cerr << "error occured" << std::endl;
+                            perror("send");
+                            abort();
+                        }
+                    }
 
-                cerr = send(conn.getFd(), msg, sizeof(msg), 0);
-                if (cerr < 0) {
-                    if (errno == EPIPE) {
-                        std::cout << "client closed the connection"
-                                  << std::endl;
-                        break;
+                    if (req.is_keepalive()) {
+                        req.reset();
+                        parser.reset();
                     } else {
-                        std::cerr << "error occured" << std::endl;
-                        perror("send");
-                        abort();
+                        break;
                     }
                 }
             }
@@ -315,6 +367,9 @@ class Server
             conn.close();
         }
     }
+
+    Socket listener_;
+    std::string rcv_msg_;
 };
 
 int main()
