@@ -1,0 +1,14 @@
+[
+  {
+    "file": "src/main.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-o",
+      "build/server_d",
+      "src/main.cpp",
+      "-g"
+    ],
+    "directory": "/home/aregmk/coding/web/cppserver/serverfiles",
+    "output": "build/server_d"
+  }
+]

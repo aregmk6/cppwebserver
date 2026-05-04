@@ -9,6 +9,7 @@
 #include <linux/socket.h>
 #include <mutex>
 #include <netinet/in.h>
+#include <openssl/ssl.h>
 #include <queue>
 #include <sstream>
 #include <string>

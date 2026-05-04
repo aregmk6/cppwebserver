@@ -1,5 +1,2 @@
 break main
-break /home/aregmk/coding/web/cppserver/serverfiles/src/main.cpp:316
-break /home/aregmk/coding/web/cppserver/serverfiles/src/main.cpp:288
-break *0x0000555555559f54
 break consume
