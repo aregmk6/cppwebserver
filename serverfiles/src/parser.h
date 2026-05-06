@@ -6,6 +6,7 @@
 #include <sstream>
 #include <string.h>
 #include <string>
+#include <string_view>
 #include <vector>
 
 using std::filesystem::path;
@@ -19,7 +20,7 @@ class Response
     };
 
     Response()
-        : version_major_(0), version_minor_(0), keepAlive_(false),
+        : version_major_(0), version_minor_(0), keep_alive_(false),
           statusCode_(0)
     {
     }
@@ -28,6 +29,23 @@ class Response
     Response(Response&& other)                 = default;
     Response& operator=(Response&& other)      = default;
     ~Response()                                = default;
+
+    std::string createHeaderString() const
+    {
+        std::stringstream stream;
+        stream << "HTTP/" << version_major_ << "." << version_minor_ << " "
+               << statusCode_ << " " << status_ << "\r\n ";
+
+        for (std::vector<Response::HeaderItem>::const_iterator it =
+                 headers_.begin();
+             it != headers_.end(); ++it) {
+            stream << it->name << ": " << it->value << "\r\n";
+        }
+
+        stream << "\r\n";
+
+        return stream.str();
+    }
 
     std::string inspect() const
     {
@@ -53,27 +71,43 @@ class Response
         version_minor_ = minor;
     }
 
-    template <typename... Header>
-    void set_headers(Header... header)
+    void set_headers(const HeaderItem& h)
     {
-        for (const auto& h : {header...}) {
-            headers_.push_back(HeaderItem{h.name, h.value});
+        headers_.push_back(h);
+    }
+
+    void set_headers(const std::vector<HeaderItem>& headers)
+    {
+        for (const auto& h : headers) {
+            headers_.push_back(h);
         }
     }
 
-    void set_content(const path& p)
+    void set_nameAndTime()
     {
-        // TODO: complete.
+        constexpr std::string_view server_name = "my sick ass server";
+
+        using std::chrono::system_clock;
+        const std::string_view* hn = headers_names_;
+        time_t cur_time = system_clock::to_time_t(system_clock::now());
+
+        std::vector<HeaderItem> new_headers{
+            {.name  = std::string(hn[kServer]),
+             .value = std::string(server_name)},
+            {.name = std::string(hn[kDate]), .value = ctime(&cur_time)}};
+
+        set_headers(new_headers);
     }
 
     void set_content(const std::string& content, const std::string& type)
     {
-        // TODO: handle type.
+        const std::string_view* hn = headers_names_;
+        set_headers({.name = std::string(hn[kContentType]), .value = type});
         content_ = content;
     }
     void set_keepalive(bool flag)
     {
-        keepAlive_ = flag;
+        keep_alive_ = flag;
     }
     void set_status(const std::string& status)
     {
@@ -85,22 +119,103 @@ class Response
         statusCode_ = status_code;
     }
 
-    bool isValid() const
+    size_t get_fileSize() const
     {
-        return valid_;
+        return file_size_;
     }
+
+    int get_fd() const
+    {
+        return fd_;
+    }
+
+    void set_fileSize(size_t size)
+    {
+        file_size_ = size;
+    }
+
+    void set_fd(int fd)
+    {
+        fd_ = fd;
+    }
+
+    enum HeaderNameIndex {
+        kServer,
+        kDate,
+        kConnection,
+        kContentEncoding,
+        kContentType,
+        kContentLength,
+        kTransferEncoding,
+        kKeepAlive,
+        kLastModified,
+        // there are more...
+    };
+
+    static constexpr std::string_view headers_names_[] = {
+        "Server:",
+        "Date:",
+        "Connection:",
+        "Content-Type:",
+        "Content-Length:",
+        "Content-Encoding:",
+        "Transfer-Encoding:",
+        "Keep-Alive:",
+        "Last-Modified:",
+        // there are more...
+    };
+
+    enum SuccessfulStateIndex {
+        kOK,
+        kCreated,
+        kAccepted,
+        kNonAuthoritativeInformation,
+        kNoContent,
+        kResetContent,
+        // there are more...
+    };
+
+    static constexpr std::string_view successful_status_names_[] = {
+        "OK",         "Created",
+        "Accepted",   "Non-Authoritative Information",
+        "No Content", "Reset Content",
+        // there are more...
+    };
+
+    enum ClientErrorStateIndex {
+        kBadRequiest,
+        kUnauthorized,
+        kPaymentRequired,
+        kForbidden,
+        kNotfound,
+    };
+
+    static constexpr std::string_view client_error_status_names_[] = {
+        "Bad Requiest", "Unauthorized", "Payment Required",
+        "Forbidden",    "Not found",
+        // there are more...
+    };
+
+    enum ResponseType {
+        kStatic,
+        kDynamic,
+    };
+
+    ResponseType type;
 
   private:
     int version_major_;
     int version_minor_;
     std::vector<HeaderItem> headers_;
     std::string content_;
-    bool keepAlive_;
 
     unsigned int statusCode_;
     std::string status_;
 
-    bool valid_ = false;
+    bool keep_alive_;
+
+    size_t file_size_;
+    int fd_;
 };
 
 class Request

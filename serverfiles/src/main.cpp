@@ -5,16 +5,18 @@
 #include <cassert>
 #include <csignal>
 #include <cstring>
+#include <fcntl.h>
 #include <filesystem>
 #include <functional>
 #include <iostream>
 #include <linux/socket.h>
 #include <mutex>
 #include <netinet/in.h>
-#include <openssl/ssl.h>
+#include <netinet/tcp.h>
 #include <queue>
 #include <sstream>
 #include <string>
+#include <sys/sendfile.h>
 #include <sys/socket.h>
 #include <thread>
 #include <unordered_map>
@@ -81,6 +83,22 @@ class ConnSock
     int get_fd() const
     {
         return fd_;
+    }
+
+    void cork() const
+    {
+        int state = 1;
+        int cerr =
+            setsockopt(fd_, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+        CPPSERVER_CHECK_ERROR(cerr, "setsockopt");
+    }
+
+    void uncork() const
+    {
+        int state = 0;
+        int cerr =
+            setsockopt(fd_, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
+        CPPSERVER_CHECK_ERROR(cerr, "setsockopt");
     }
 
   private:
@@ -376,7 +394,101 @@ class Server
         return true;
     }
 
-    bool createResponse(const ConnSock& conn, const Request& req, Response& res)
+    using FD = int;
+    FD getStaticFileReady(const fs::path& p)
+    {
+        if (!fs::is_regular_file(p)) {
+            return -1;
+        }
+
+        FD fd = open(p.c_str(), O_RDONLY);
+        CPPSERVER_CHECK_ERROR(fd, "open");
+
+        return fd;
+    }
+
+    void createFileResponse(FD fd, size_t file_size, Response& res)
+    {
+        using ssi = Response::SuccessfulStateIndex;
+        using hni = Response::HeaderNameIndex;
+        // for now I only support http 1.1
+        res.set_versions(1, 1);
+        res.set_nameAndTime();
+
+        auto status = std::string(Response::successful_status_names_[ssi::kOK]);
+        res.set_status(status);
+
+        res.set_statusCode(200 + ssi::kOK);
+
+        res.set_keepalive(true);
+
+        Response::HeaderItem content_size = {
+            .name  = std::string(Response::headers_names_[hni::kContentLength]),
+            .value = std::to_string(file_size),
+        };
+        res.set_headers(content_size);
+
+        res.set_fd(fd);
+
+        res.set_fileSize(file_size);
+
+        res.type = Response::kStatic;
+    }
+
+    static void checkSendError(int cerr)
+    {
+        if (cerr < 0) {
+            if (errno == EPIPE) { // errno is thread-safe :D
+                std::cout << "client closed the connection" << std::endl;
+            } else {
+                std::cerr << "error occured" << std::endl;
+                perror("send");
+                abort();
+            }
+        }
+    }
+
+    bool sendFile(const ConnSock& conn, const Response& res)
+    {
+
+        std::string header_str = res.createHeaderString();
+
+        conn.cork();
+
+        int cerr =
+            send(conn.get_fd(), header_str.c_str(), header_str.size(), 0);
+        checkSendError(cerr);
+
+        cerr = sendfile(conn.get_fd(), res.get_fd(), 0, res.get_fileSize());
+        checkSendError(cerr);
+
+        conn.uncork();
+
+        // close sent file
+        close(res.get_fd());
+
+        return true;
+    }
+
+    bool sendResponse(const ConnSock& conn, const Response& res)
+    {
+        bool ret_stat = false;
+
+        switch (res.type) {
+        case Response::kStatic: {
+            return sendFile(conn, res);
+            break;
+        }
+        case Response::kDynamic: {
+            // handle dynamic...
+            break;
+        }
+        }
+
+        return ret_stat;
+    }
+
+    bool createResponse(const Request& req, Response& res)
     {
         static constexpr char ROOT[] = "/";
         fs::path full_path{};
@@ -391,30 +503,29 @@ class Server
         if (req.get_method() == "GET") {
             if (!static_serve_path_.empty() &&
                 compareWiteStaticServePath(full_path)) {
-                // TODO: send file for static serve path.
+                FD fd = getStaticFileReady(full_path);
+                if (fd == -1) {
+                    // send 404
+                    std::cerr << "404" << std::endl;
+                    return false;
+                }
+                size_t file_size = fs::file_size(full_path);
+                // fill up the response object
+                createFileResponse(fd, file_size, res);
+                return true;
             } else if (GET_callbacks_.find(full_path) != GET_callbacks_.end()) {
                 GET_callbacks_[full_path](req, res);
+                return true;
             } else {
                 // undefined path
+                std::cerr << "undefined path" << std::endl;
                 return false;
             }
         }
 
-        int cerr =
-            send(conn.get_fd(), kBoilerplateHtml, sizeof(kBoilerplateHtml), 0);
+        std::cerr << "undefined method" << std::endl;
 
-        if (cerr < 0) {
-            if (errno == EPIPE) { // errno is thread-safe :D
-                std::cout << "client closed the connection" << std::endl;
-                return true;
-            } else {
-                std::cerr << "error occured" << std::endl;
-                perror("send");
-                abort();
-            }
-        }
-
-        return true;
+        return false;
     }
 
     // connection handler. Reads input and responds. Returns false if it's a bad
@@ -446,15 +557,19 @@ class Server
                 return false;
             } // Good request:
             else { // send response
+
                 Response res{};
                 // debug ------
                 std::cout << rcv_msg_ << std::endl;
                 // debug ------
 
-                cres = createResponse(conn, req, res);
+                cres = createResponse(req, res);
                 if (cres == false) {
                     // handle failiure
                 }
+
+                // TODO: check returned result
+                sendResponse(conn, res);
 
                 if (req.is_keepalive()) {
                     req.reset();

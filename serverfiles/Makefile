@@ -1,13 +1,16 @@
-.PHONY: server
-server: build/server
+srcfiles := src/main.cpp
+interfaces := src/parser.h
 
-build/server: src/main.cpp src/parser.h
+.PHONY: server
+server: build/server $(interfaces)
+
+build/server: $(srcfiles) 
 	mkdir -p $(@D)
 	g++ -o build/server src/main.cpp
 
-debug: build/server_d
+debug: build/server_d $(interfaces)
 
-build/server_d: src/main.cpp src/parser.h
+build/server_d: $(srcfiles) 
 	mkdir -p $(@D)
 	g++ -o build/server_d src/main.cpp -g
 
