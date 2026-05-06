@@ -4,11 +4,10 @@
     "arguments": [
       "/usr/bin/g++",
       "-o",
-      "build/server_d",
-      "src/main.cpp",
-      "-g"
+      "build/server",
+      "src/main.cpp"
     ],
     "directory": "/home/aregmk/coding/web/cppserver/serverfiles",
-    "output": "build/server_d"
+    "output": "build/server"
   }
 ]

@@ -85,6 +85,11 @@ class Response
         statusCode_ = status_code;
     }
 
+    bool isValid() const
+    {
+        return valid_;
+    }
+
   private:
     int version_major_;
     int version_minor_;
@@ -94,6 +99,8 @@ class Response
 
     unsigned int statusCode_;
     std::string status_;
+
+    bool valid_ = false;
 };
 
 class Request

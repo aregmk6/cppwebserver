@@ -1,25 +1,31 @@
 #!/bin/bash
 
 if [[ "${1}" == "-r" ]]; then 
-	if [ -f /build/server ]; then
+	if [ ! -f /build/server ]; then
 		./build/server
 	else
 		bear -- make
 		./build/server
 	fi
+
 elif [[ "${1}" == "-rg" ]]; then 
-	if [ -f /build/server_d ]; then
+	if [ ! -f /build/server_d ]; then
 		./build/server_d
 	else
 		bear -- make
 		./build/server_d
 	fi
+
 elif [[ "${1}" == "-c" ]]; then 
     make clean
+	
 elif [[ "${1}" == "-b" ]]; then 
 	bear -- make
+
 elif [[ "${1}" == "-g" ]]; then 
 	bear -- make debug
+
 else
+
 	echo "provide flag"
 fi
