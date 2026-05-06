@@ -295,7 +295,7 @@ class Server
 
         if (fs::path(path).stem() == "") {
             auto start         = path.begin();
-            auto end           = path.end();
+            auto end           = --path.end();
             static_serve_path_ = fs::path(start, end);
         } else {
             static_serve_path_ = path;
@@ -433,6 +433,9 @@ class Server
         res.set_fileSize(file_size);
 
         res.type = Response::kStatic;
+
+        std::cout << "response created:" << std::endl;
+        std::cout << res.inspect() << std::endl;
     }
 
     static void checkSendError(int cerr)
@@ -636,7 +639,9 @@ int main(int argc, char** argv)
     //
     // });
 
-    srv.staticServe("../public/");
+    assert(srv.staticServe(
+               "/home/aregmk/coding/web/cppserver/serverfiles/public/") ==
+           true);
 
     srv.listen("ALL", 6969);
 

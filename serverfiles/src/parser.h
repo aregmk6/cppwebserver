@@ -36,9 +36,7 @@ class Response
         stream << "HTTP/" << version_major_ << "." << version_minor_ << " "
                << statusCode_ << " " << status_ << "\r\n ";
 
-        for (std::vector<Response::HeaderItem>::const_iterator it =
-                 headers_.begin();
-             it != headers_.end(); ++it) {
+        for (auto it = headers_.begin(); it != headers_.end(); ++it) {
             stream << it->name << ": " << it->value << "\r\n";
         }
 
@@ -53,9 +51,7 @@ class Response
         stream << "HTTP/" << version_major_ << "." << version_minor_ << " "
                << statusCode_ << " " << status_ << "\n";
 
-        for (std::vector<Response::HeaderItem>::const_iterator it =
-                 headers_.begin();
-             it != headers_.end(); ++it) {
+        for (auto it = headers_.begin(); it != headers_.end(); ++it) {
             stream << it->name << ": " << it->value << "\n";
         }
 
@@ -143,9 +139,9 @@ class Response
         kServer,
         kDate,
         kConnection,
-        kContentEncoding,
         kContentType,
         kContentLength,
+        kContentEncoding,
         kTransferEncoding,
         kKeepAlive,
         kLastModified,
@@ -153,15 +149,15 @@ class Response
     };
 
     static constexpr std::string_view headers_names_[] = {
-        "Server:",
-        "Date:",
-        "Connection:",
-        "Content-Type:",
-        "Content-Length:",
-        "Content-Encoding:",
-        "Transfer-Encoding:",
-        "Keep-Alive:",
-        "Last-Modified:",
+        "Server",
+        "Date",
+        "Connection",
+        "Content-Type",
+        "Content-Length",
+        "Content-Encoding",
+        "Transfer-Encoding",
+        "Keep-Alive",
+        "Last-Modified",
         // there are more...
     };
 
