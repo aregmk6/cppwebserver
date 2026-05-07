@@ -2,6 +2,7 @@
 #define PARSER_H_
 
 #include <algorithm>
+#include <ctime>
 #include <filesystem>
 #include <sstream>
 #include <string.h>
@@ -81,16 +82,21 @@ class Response
 
     void set_nameAndTime()
     {
+        std::ostringstream oss;
         constexpr std::string_view server_name = "my sick ass server";
 
         using std::chrono::system_clock;
         const std::string_view* hn = headers_names_;
-        time_t cur_time = system_clock::to_time_t(system_clock::now());
+
+        const auto cur_time = std::time(nullptr);
+        const auto local_time =
+            std::put_time(std::localtime(&cur_time), "%d-%m-%Y %H-%M-%S");
+        oss << local_time;
 
         std::vector<HeaderItem> new_headers{
             {.name  = std::string(hn[kServer]),
              .value = std::string(server_name)},
-            {.name = std::string(hn[kDate]), .value = ctime(&cur_time)}};
+            {.name = std::string(hn[kDate]), .value = oss.str()}};
 
         set_headers(new_headers);
     }

@@ -345,7 +345,6 @@ class Server
             bytes_rcvd = recv(conn.get_fd(), //
                               (void*)buffer, //
                               sizeof(buffer), rcv_flag);
-            std::cout << "BYTES RECIEVED: " << bytes_rcvd << std::endl;
             if (bytes_rcvd == 0) {
                 return false;
             } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
@@ -384,6 +383,9 @@ class Server
 
     bool compareWiteStaticServePath(const fs::path& p)
     {
+        std::cout << "compering: " << p << std::endl
+                  << "with: " << static_serve_path_ << std::endl;
+
         for (auto s_it = static_serve_path_.begin(), p_it = p.begin();
              s_it != static_serve_path_.end(); ++s_it, ++p_it) {
             if (*s_it != *p_it) {
@@ -433,9 +435,6 @@ class Server
         res.set_fileSize(file_size);
 
         res.type = Response::kStatic;
-
-        std::cout << "response created:" << std::endl;
-        std::cout << res.inspect() << std::endl;
     }
 
     static void checkSendError(int cerr)
@@ -500,7 +499,8 @@ class Server
         if (uri == ROOT) {
             full_path = root_file_path_;
         } else {
-            full_path = static_serve_path_ / uri;
+            full_path =
+                static_serve_path_ / std::filesystem::relative(uri, "/");
         }
 
         if (req.get_method() == "GET") {
@@ -540,6 +540,7 @@ class Server
         Request req{};
         HttpRequestParser parser{};
 
+        // FIXME: connection hangs when the browser is asking for images.
         while (1) {
             rcv_msg_.clear();
 
