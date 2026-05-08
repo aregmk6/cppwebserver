@@ -85,6 +85,15 @@ class ConnSock
         return fd_;
     }
 
+    // void set_timeout() const
+    // {
+    //     struct timeval tv;
+    //     tv.tv_sec  = 0;
+    //     tv.tv_usec = 1000;
+    //     setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof
+    //     tv);
+    // }
+
     void cork() const
     {
         int state = 1;
@@ -224,7 +233,10 @@ class Socket
         int client_socket  = ::accept(fd_, &client_addr, &addr_len);
         CPPSERVER_CHECK_ERROR(client_socket, "accept");
 
-        return ConnSock(client_socket, client_addr, addr_len);
+        ConnSock conn = ConnSock(client_socket, client_addr, addr_len);
+        // conn.set_timeout();
+
+        return conn;
     }
 
     int getFd() const
@@ -349,6 +361,10 @@ class Server
                 return false;
             } else if (errno == EWOULDBLOCK || errno == EAGAIN) {
                 break;
+            } else if (errno == ECONNRESET) {
+                std::cerr << "connection reset by peer... handling."
+                          << std::endl;
+                break;
             }
             CPPSERVER_CHECK_ERROR(bytes_rcvd, "recv");
 
@@ -383,9 +399,6 @@ class Server
 
     bool compareWiteStaticServePath(const fs::path& p)
     {
-        std::cout << "compering: " << p << std::endl
-                  << "with: " << static_serve_path_ << std::endl;
-
         for (auto s_it = static_serve_path_.begin(), p_it = p.begin();
              s_it != static_serve_path_.end(); ++s_it, ++p_it) {
             if (*s_it != *p_it) {
@@ -409,10 +422,14 @@ class Server
         return fd;
     }
 
-    void createFileResponse(FD fd, size_t file_size, Response& res)
+    void createFileResponse(FD fd, size_t file_size, const fs::path& path,
+                            Response& res)
     {
+        auto extp = ExtensionParser{};
+
         using ssi = Response::SuccessfulStateIndex;
         using hni = Response::HeaderNameIndex;
+
         // for now I only support http 1.1
         res.set_versions(1, 1);
         res.set_nameAndTime();
@@ -429,6 +446,13 @@ class Server
             .value = std::to_string(file_size),
         };
         res.set_headers(content_size);
+
+        Response::HeaderItem content_type = {
+            .name  = std::string(Response::headers_names_[hni::kContentType]),
+            .value = extp.parseExtension(path.extension()),
+        };
+
+        res.set_headers(content_type);
 
         res.set_fd(fd);
 
@@ -469,6 +493,8 @@ class Server
         // close sent file
         close(res.get_fd());
 
+        assert(cerr == res.get_fileSize());
+
         return true;
     }
 
@@ -490,7 +516,7 @@ class Server
         return ret_stat;
     }
 
-    bool createResponse(const Request& req, Response& res)
+    int createResponse(const Request& req, Response& res)
     {
         static constexpr char ROOT[] = "/";
         fs::path full_path{};
@@ -509,20 +535,20 @@ class Server
                 FD fd = getStaticFileReady(full_path);
                 if (fd == -1) {
                     // send 404
-                    std::cerr << "404" << std::endl;
-                    return false;
+                    std::cerr << "non existent file" << std::endl;
+                    return 404;
                 }
                 size_t file_size = fs::file_size(full_path);
                 // fill up the response object
-                createFileResponse(fd, file_size, res);
-                return true;
+                createFileResponse(fd, file_size, full_path, res);
+                return 0;
             } else if (GET_callbacks_.find(full_path) != GET_callbacks_.end()) {
                 GET_callbacks_[full_path](req, res);
-                return true;
+                return 0;
             } else {
                 // undefined path
                 std::cerr << "undefined path" << std::endl;
-                return false;
+                return 404;
             }
         }
 
@@ -536,7 +562,7 @@ class Server
     // the connection.
     bool handleConn(const ConnSock& conn)
     {
-        bool cres = false;
+        int cres = false;
         Request req{};
         HttpRequestParser parser{};
 
@@ -568,8 +594,16 @@ class Server
                 // debug ------
 
                 cres = createResponse(req, res);
-                if (cres == false) {
-                    // handle failiure
+                if (cres != 0) {
+                    switch (cres) {
+                    case 404:
+                        // send 404
+                        std::cout << "404" << std::endl;
+                        return false;
+                        break;
+                    default:
+                        break;
+                    }
                 }
 
                 // TODO: check returned result
@@ -594,36 +628,8 @@ class Server
     fs::path root_file_path_;
 };
 
-bool compareWiteStaticServePath(const fs::path& p)
-{
-    std::string path_str = "/foo/bar/boo/car";
-    fs::path path;
-    if (fs::path(path_str).stem() == "") {
-        auto start = path_str.begin();
-        auto end   = --path_str.end();
-        path       = fs::path(start, end);
-    } else {
-        path = path_str;
-    }
-
-    std::cout << "path_str: " << path_str << std::endl;
-    std::cout << "path: " << path << std::endl;
-
-    for (auto s_it = path.begin(), p_it = p.begin(); s_it != path.end();
-         ++s_it, ++p_it) {
-        if (*s_it != *p_it) {
-            std::cout << "static: " << *s_it << std::endl;
-            std::cout << "given: " << *p_it << std::endl;
-            return false;
-        }
-    }
-
-    return true;
-}
-
 void test_run(const char* path)
 {
-    assert(compareWiteStaticServePath(path) == true);
 }
 
 int main(int argc, char** argv)

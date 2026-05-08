@@ -56,8 +56,12 @@ class Response
             stream << it->name << ": " << it->value << "\n";
         }
 
-        std::string data(content_.begin(), content_.end());
-        stream << data << "\n";
+        stream << "\n";
+
+        if (!content_.empty()) {
+            std::string data(content_.begin(), content_.end());
+            stream << data << "\n";
+        }
         return stream.str();
     }
 
@@ -83,7 +87,7 @@ class Response
     void set_nameAndTime()
     {
         std::ostringstream oss;
-        constexpr std::string_view server_name = "my sick ass server";
+        constexpr std::string_view server_name = "my-sick-ass-server";
 
         using std::chrono::system_clock;
         const std::string_view* hn = headers_names_;
@@ -787,6 +791,255 @@ class HttpRequestParser
     std::string chunk_size_str_;
     size_t chunkSize_;
     bool chunked_;
+};
+
+class ExtensionParser
+{
+  public:
+    std::string parseExtension(const std::string& extension)
+    {
+        State state = kDot;
+        auto start  = extension.begin();
+        auto end    = extension.end();
+        while (start != end) {
+            char input = *start++;
+
+            switch (state) {
+            case kDot:
+                if (input == '.') {
+                    state = kFirstLetter;
+                } else {
+                    return "";
+                }
+                break;
+            case kFirstLetter: {
+                switch (input) {
+                case 'h':
+                    state = State::kH;
+                    break;
+                case 'c':
+                    state = State::kC;
+                    break;
+                case 'j':
+                    state = State::kJ;
+                    break;
+                case 'p':
+                    state = State::kP;
+                    break;
+                case 's':
+                    state = State::kS;
+                    break;
+                case 'w':
+                    state = State::kW;
+                    break;
+                case 't':
+                    state = State::kT;
+                    break;
+                }
+                break;
+            }
+            case kC:
+                switch (input) {
+                case 's':
+                    state = State::kCs;
+                    break;
+                }
+                break;
+            case kCs:
+                switch (input) {
+                case 's':
+                    return std::string(text_types[(int)TextMime::kCss]);
+                }
+                break;
+            case kH:
+                switch (input) {
+                case 't':
+                    state = State::kHt;
+                    break;
+                }
+                break;
+            case kHt:
+                switch (input) {
+                case 'm':
+                    state = State::kHtm;
+                    break;
+                }
+                break;
+            case kHtm:
+                switch (input) {
+                case 'l':
+                    return std::string(text_types[(int)TextMime::kHtml]);
+                }
+                break;
+            case kJ:
+                switch (input) {
+                case 'p':
+                    state = State::kJp;
+                    break;
+                case 's':
+                    return std::string(text_types[(int)TextMime::kJs]);
+                }
+                break;
+            case kJp:
+                switch (input) {
+                case 'e':
+                    state = State::kJpe;
+                    break;
+                case 'g':
+                    return std::string(image_types[(int)ImgMime::kJpg]);
+                }
+                break;
+            case kJpe:
+                switch (input) {
+                case 'g':
+                    return std::string(image_types[(int)ImgMime::kJpeg]);
+                }
+                break;
+            case kP:
+                switch (input) {
+                case 'n':
+                    state = kPn;
+                    break;
+                }
+                break;
+            case kPn:
+                switch (input) {
+                case 'g':
+                    return std::string(image_types[(int)ImgMime::kPng]);
+                }
+                break;
+            case kW:
+                switch (input) {
+                case 'o':
+                    state = kWo;
+                    break;
+                }
+                break;
+            case kWo:
+                switch (input) {
+                case 'f':
+                    state = kWof;
+                    break;
+                }
+                break;
+            case kWof:
+                switch (input) {
+                case 'f':
+                    if (start == end) {
+                        return std::string(font_types[(int)FontMime::kWoff]);
+                    }
+                    state = kWoff;
+                    break;
+                }
+                break;
+            case kWoff:
+                switch (input) {
+                case '2':
+                    return std::string(font_types[(int)FontMime::kWoff2]);
+                }
+                break;
+            case kT:
+                switch (input) {
+                case 't':
+                    state = kTt;
+                    break;
+                }
+                break;
+            case kTt:
+                switch (input) {
+                case 't':
+                    return std::string(font_types[(int)FontMime::kTtf]);
+                }
+                break;
+            case kS:
+                switch (input) {
+                case 'v':
+                    state = kSv;
+                    break;
+                }
+                break;
+            case kSv:
+                switch (input) {
+                case 'g':
+                    return std::string(image_types[(int)ImgMime::kSvg]);
+                }
+                break;
+            default:
+                return "";
+            }
+        }
+
+        return "";
+    }
+
+    enum class ImgMime {
+        kPng,
+        kJpeg,
+        kJpg,
+        kSvg,
+    };
+    enum class TextMime {
+        kHtml,
+        kJs,
+        kCss,
+    };
+    enum class FontMime {
+        kWoff2,
+        kWoff,
+        kTtf,
+    };
+
+  private:
+    enum State {
+        kDot,
+        kFirstLetter,
+        kH,
+        kHt,
+        kHtm,
+        kHtml,
+        kC,
+        kCs,
+        kCss,
+        kJ,
+        kJs,
+        kJp,
+        kJpg,
+        kJpe,
+        kJpeg,
+        kP,
+        kPn,
+        kPng,
+        kS,
+        kSv,
+        kSvg,
+        kW,
+        kWo,
+        kWof,
+        kWoff,
+        kWoff2,
+        kT,
+        kTt,
+        kTtf,
+    };
+
+    static constexpr std::string_view image_types[]{
+        "image/png",
+        "image/jpeg",
+        "image/jpg",
+        "image/svg",
+    };
+
+    static constexpr std::string_view text_types[]{
+        "text/html",
+        "text/javascript",
+        "text/css",
+    };
+
+    static constexpr std::string_view font_types[]{
+        "font/woff2",
+        "font/woff",
+        "font/ttf",
+    };
 };
 
 #endif

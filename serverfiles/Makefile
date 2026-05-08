@@ -2,17 +2,17 @@ srcfiles := src/main.cpp
 interfaces := src/parser.h
 
 .PHONY: server
-server: build/server $(interfaces)
+server: build/server 
 
-build/server: $(srcfiles) 
+build/server: $(srcfiles) $(interfaces)
 	mkdir -p $(@D)
-	g++ -o build/server src/main.cpp -std=c++20 
+	g++ -o build/server $(srcfiles) -std=c++20 
 
-debug: build/server_d $(interfaces)
+debug: build/server_d 
 
-build/server_d: $(srcfiles) 
+build/server_d: $(srcfiles) $(interfaces)
 	mkdir -p $(@D)
-	g++ -o build/server_d src/main.cpp -g -std=c++20
+	g++ -o build/server_d $(srcfiles) -g -std=c++20
 
 clean:
 	rm -rf build/ compile_commands.json
