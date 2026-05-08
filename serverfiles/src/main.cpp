@@ -10,15 +10,11 @@
 #include <functional>
 #include <iostream>
 #include <linux/socket.h>
-#include <mutex>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
-#include <queue>
-#include <sstream>
 #include <string>
 #include <sys/sendfile.h>
 #include <sys/socket.h>
-#include <thread>
 #include <unordered_map>
 #include <utility>
 
@@ -84,15 +80,6 @@ class ConnSock
     {
         return fd_;
     }
-
-    // void set_timeout() const
-    // {
-    //     struct timeval tv;
-    //     tv.tv_sec  = 0;
-    //     tv.tv_usec = 1000;
-    //     setsockopt(fd_, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof
-    //     tv);
-    // }
 
     void cork() const
     {
