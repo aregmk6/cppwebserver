@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "file": "src/main.cpp",
+    "arguments": [
+      "/usr/bin/g++",
+      "-o",
+      "build/server",
+      "src/main.cpp",
+      "-std=c++20",
+      "-Wall",
+      "-pedantic"
+    ],
+    "directory": "/home/aregmk/coding/web/cppserver/serverfiles",
+    "output": "build/server"
+  }
+]

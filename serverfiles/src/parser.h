@@ -215,10 +215,9 @@ class Response
     std::vector<HeaderItem> headers_;
     std::string content_;
 
+    bool keep_alive_;
     unsigned int statusCode_;
     std::string status_;
-
-    bool keep_alive_;
 
     size_t file_size_;
     int fd_;

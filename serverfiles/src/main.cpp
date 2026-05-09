@@ -1,4 +1,5 @@
 #include "parser.h"
+#include "thread_pool.h"
 #include <algorithm>
 #include <arpa/inet.h>
 #include <asm-generic/socket.h>
@@ -18,15 +19,6 @@
 #include <unordered_map>
 #include <utility>
 
-#define CPPSERVER_CHECK_ERROR(error, name)                                     \
-    do {                                                                       \
-        if (error < 0) {                                                       \
-            std::cerr << "error occured" << std::endl;                         \
-            perror(name);                                                      \
-            abort();                                                           \
-        }                                                                      \
-    } while (0)
-
 constexpr char kBoilerplateHtml[] =
     R"(HTTP/1.1 200 OK
 Date: Mon, 27 Jul 2024 12:28:53 GMT
@@ -36,79 +28,6 @@ Content-Length: 48
 
 <html><body><h1>Hello World!</h1></body></html>
 )";
-
-class ConnSock
-{
-  public:
-    ConnSock() = default;
-    ConnSock(int fd, struct sockaddr sockaddr, socklen_t addr_size)
-
-        : fd_(fd), sockaddr_(sockaddr), addr_size_(addr_size)
-    {
-    }
-
-    ConnSock(const ConnSock&)            = delete;
-    ConnSock& operator=(const ConnSock&) = delete;
-    ConnSock(ConnSock&& other)
-    {
-        swap(other);
-    }
-    ConnSock& operator=(ConnSock&& other)
-    {
-        close();
-
-        swap(other);
-        return *this;
-    }
-    ~ConnSock()
-    {
-        close();
-    }
-
-    void close()
-    {
-        if (fd_ != -1) {
-            ::close(fd_);
-            CPPSERVER_CHECK_ERROR(fd_, "close (socket)");
-            fd_ = -1;
-        }
-        addr_size_ = 0;
-        sockaddr_  = {0}; // TODO: check if this does what it's supposed to.
-    }
-
-    int get_fd() const
-    {
-        return fd_;
-    }
-
-    void cork() const
-    {
-        int state = 1;
-        int cerr =
-            setsockopt(fd_, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
-        CPPSERVER_CHECK_ERROR(cerr, "setsockopt");
-    }
-
-    void uncork() const
-    {
-        int state = 0;
-        int cerr =
-            setsockopt(fd_, IPPROTO_TCP, TCP_CORK, &state, sizeof(state));
-        CPPSERVER_CHECK_ERROR(cerr, "setsockopt");
-    }
-
-  private:
-    void swap(ConnSock& other)
-    {
-        std::swap(fd_, other.fd_);
-        std::swap(addr_size_, other.addr_size_);
-        std::swap(sockaddr_, other.sockaddr_);
-    }
-
-    int fd_                   = -1;
-    int addr_size_            = 0;
-    struct sockaddr sockaddr_ = {0};
-};
 
 class Socket
 {
@@ -240,10 +159,11 @@ class Socket
         std::swap(sockaddr_, other.sockaddr_);
     }
 
-    int fd_                      = -1;
-    int port_                    = 0;
-    int addr_size_               = 0;
-    int queue_                   = 0;
+    int fd_        = -1;
+    int port_      = 0;
+    int addr_size_ = 0;
+    int queue_     = 0;
+
     struct sockaddr_in sockaddr_ = {0};
 };
 
@@ -373,7 +293,8 @@ class Server
         while (1) {
             conn = listener_.accept();
 
-            bool outcome = handleConn(conn);
+            handleConn(conn);
+            // bool outcome = handleConn(conn);
             // if (outcome == false) {
             //     // do something about the bad client...
             // }
@@ -468,7 +389,7 @@ class Server
 
         conn.cork();
 
-        int cerr =
+        uint cerr =
             send(conn.get_fd(), header_str.c_str(), header_str.size(), 0);
         checkSendError(cerr);
 
